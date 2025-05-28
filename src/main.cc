@@ -1,23 +1,10 @@
 #include <iostream>
+#include <memory>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-const GLchar* vertexShaderSource = R"(
-#version 330 core
-layout (location = 0) in vec3 aPos;
-void main() {
-  gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-}
-)";
-
-const GLchar* fragmentShaderSource = R"(
-#version 330 core
-out vec4 FragColor;
-void main() {
-  FragColor = vec4(1.0, 0.5, 0.2, 1.0);
-}
-)";
+#include "ShaderProgram.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
   glViewport(0, 0, width, height);
@@ -82,62 +69,18 @@ int main(void) {
 
   printSystemInfo();
 
-  GLint success;
-  GLchar infoLog[512];
-
-  GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertexShaderID, 1, &vertexShaderSource, NULL);
-  glCompileShader(vertexShaderID);
-  glGetShaderiv(vertexShaderID, GL_COMPILE_STATUS, &success);
-  if (!success) {
-    glGetShaderInfoLog(vertexShaderID, sizeof infoLog, NULL, infoLog);
-    std::cerr << "Vertex shader compilation failed:\n" << infoLog << std::endl;
-    glDeleteShader(vertexShaderID);
+  std::unique_ptr<ShaderProgram> shaderProgram = ShaderProgram::create(
+      "assets/shaders/shader.vs", "assets/shaders/shader.fs");
+  if (!shaderProgram) {
     glfwTerminate();
     return -1;
   }
-
-  GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragmentShaderID, 1, &fragmentShaderSource, NULL);
-  glCompileShader(fragmentShaderID);
-  glGetShaderiv(fragmentShaderID, GL_COMPILE_STATUS, &success);
-  if (!success) {
-    glGetShaderInfoLog(fragmentShaderID, sizeof infoLog, NULL, infoLog);
-    std::cerr << "Fragment shader compilation failed:\n" << infoLog << std::endl;
-    glDeleteShader(fragmentShaderID);
-    glDeleteShader(vertexShaderID);
-    glfwTerminate();
-    return -1;
-  }
-
-  GLuint shaderProgramID = glCreateProgram();
-  glAttachShader(shaderProgramID, vertexShaderID);
-  glAttachShader(shaderProgramID, fragmentShaderID);
-  glLinkProgram(shaderProgramID);
-  glGetProgramiv(shaderProgramID, GL_LINK_STATUS, &success);
-  if (!success) {
-    glGetProgramInfoLog(fragmentShaderID, sizeof infoLog, NULL, infoLog);
-    std::cerr << "Shader program linking failed:\n" << infoLog << std::endl;
-    glDeleteProgram(shaderProgramID);
-    glDeleteShader(fragmentShaderID);
-    glDeleteShader(vertexShaderID);
-    glfwTerminate();
-    return -1;
-  }
-
-  glDeleteShader(fragmentShaderID);
-  glDeleteShader(vertexShaderID);
 
   GLfloat vertices[] = {
-     0.5f,  0.5f, 0.0f, // top right
-     0.5f, -0.5f, 0.0f, // bottom right
-    -0.5f, -0.5f, 0.0f, // bottom left
-    -0.5f,  0.5f, 0.0f, // top left
-  };
-
-  GLuint indices[] = {
-    0, 1, 3,
-    1, 2, 3,
+    // positions        // colors
+     0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom right
+    -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, // bottom left
+     0.0f,  0.5f, 0.0f, 0.0f, 0.0f, 1.0f, // top
   };
 
   /* A *vertex buffer object (VBO)* can store a large number of vertices in the
@@ -146,11 +89,6 @@ int main(void) {
   GLuint VBO, VAO;
   glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
-
-  /* An *element buffer object (EBO)* is a buffer that stores indices that
-   * OpenGL uses to decide what vertices to draw. */
-  GLuint EBO;
-  glGenBuffers(1, &EBO);
 
   /* By binding a VAO, all subsequent VBO, EBO and vertex attribute calls will
    * be stored inside the VAO. */
@@ -161,18 +99,16 @@ int main(void) {
    * data into the currently bound buffer. */
   glBufferData(GL_ARRAY_BUFFER, sizeof vertices, vertices, GL_STATIC_DRAW);
 
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof indices, indices, GL_STATIC_DRAW);
-
   /* We can tell OpenGL how it should interpret the vertex data (per vertex
    * attribute) using `glVertexAttribPointer`. */
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)0);
   /* Enable the vertex attribute with `glEnableVertexAttribArray`. */
   glEnableVertexAttribArray(0);
 
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+  glEnableVertexAttribArray(1);
+
   glBindBuffer(GL_ARRAY_BUFFER, 0);
-  /* Note that: do *not* unbind the EBO while the VAO is active, otherwise it
-   * doesn't have an EBO configured. */
   glBindVertexArray(0);
 
   while (!glfwWindowShouldClose(window)) {
@@ -181,9 +117,9 @@ int main(void) {
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glUseProgram(shaderProgramID);
+    shaderProgram->use();
     glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, sizeof indices / sizeof indices[0], GL_UNSIGNED_INT, (void*)0);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
     glBindVertexArray(0);
 
     glfwSwapBuffers(window);
@@ -194,10 +130,8 @@ int main(void) {
   }
 
   /* Optional: de-allocate all resources once they've outlived their purpose. */
-  glDeleteBuffers(1, &EBO);
-  glDeleteBuffers(1, &VBO);
   glDeleteVertexArrays(1, &VAO);
-  glDeleteProgram(shaderProgramID);
+  glDeleteBuffers(1, &VBO);
 
   glfwTerminate();
 
