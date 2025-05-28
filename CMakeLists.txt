@@ -13,6 +13,8 @@ file(GLOB GLAD_SOURCES ${PROJECT_SOURCE_DIR}/third_party/glad/src/glad.c)
 add_executable(opengl_app
   ${GLAD_SOURCES}
   ${PROJECT_SOURCE_DIR}/src/main.cc
+  ${PROJECT_SOURCE_DIR}/src/ShaderProgram.cc
+  ${PROJECT_SOURCE_DIR}/src/ShaderProgram.h
 )
 target_include_directories(opengl_app PRIVATE
   ${PROJECT_SOURCE_DIR}/third_party/glad/include
