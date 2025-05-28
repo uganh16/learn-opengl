@@ -23,6 +23,25 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
   glViewport(0, 0, width, height);
 }
 
+void printSystemInfo(void) {
+  int glfwMajor, glfwMinor;
+  glfwGetVersion(&glfwMajor, &glfwMinor, NULL);
+  std::cout << "GLFW version: " << glfwMajor << "." << glfwMinor << std::endl;
+
+  const GLchar* glVersion = (const GLchar*)glGetString(GL_VERSION);
+  std::cout << "OpenGL version: " << (glVersion ? glVersion : "unknown") << std::endl;
+
+  const GLchar* renderer = (const GLchar*)glGetString(GL_RENDERER);
+  std::cout << "Renderer: " << (renderer ? renderer : "unknown") << std::endl;
+
+  const GLchar* glslVersion = (const GLchar*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+  std::cout << "GLSL version: " << (glslVersion ? glslVersion : "unknown") << std::endl;
+
+  GLint maxVertexAttribs;
+  glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxVertexAttribs);
+  std::cout << "Maximum number of vertex attributes supported: " << maxVertexAttribs << std::endl;
+}
+
 void processInput(GLFWwindow* window) {
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
     glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -60,6 +79,8 @@ int main(void) {
     glfwTerminate();
     return -1;
   }
+
+  printSystemInfo();
 
   GLint success;
   GLchar infoLog[512];
