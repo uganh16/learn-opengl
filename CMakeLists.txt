@@ -16,10 +16,12 @@ add_subdirectory(third_party/glad)
 
 add_executable(opengl_app
   ${PROJECT_SOURCE_DIR}/src/main.cc
+  ${PROJECT_SOURCE_DIR}/src/Mesh.cc
+  ${PROJECT_SOURCE_DIR}/src/Mesh.h
   ${PROJECT_SOURCE_DIR}/src/ShaderProgram.cc
   ${PROJECT_SOURCE_DIR}/src/ShaderProgram.h
 )
 target_include_directories(opengl_app PRIVATE
-  ${PROJECT_SOURCE_DIR}/third_party/glad/include
+  ${boost_pfr_SOURCE_DIR}/include
 )
 target_link_libraries(opengl_app PRIVATE glad glfw OpenGL::GL)

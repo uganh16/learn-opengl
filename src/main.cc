@@ -4,6 +4,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include "Mesh.h"
 #include "ShaderProgram.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
@@ -76,62 +77,36 @@ int main(void) {
     return -1;
   }
 
-  GLfloat vertices[] = {
-    // positions        // colors
-     0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom right
-    -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, // bottom left
-     0.0f,  0.5f, 0.0f, 0.0f, 0.0f, 1.0f, // top
+  struct Vertex {
+    glm::vec3 position;
+    glm::vec3 color;
   };
 
-  /* A *vertex buffer object (VBO)* can store a large number of vertices in the
-   * GPU memory. A *vertex array object (VAO)* stores our vertex attribute
-   * configuration and which VBO to use. */
-  GLuint VBO, VAO;
-  glGenVertexArrays(1, &VAO);
-  glGenBuffers(1, &VBO);
+  std::vector<Vertex> vertices{
+    { {  0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f } }, // bottom right
+    { { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f } }, // bottom left
+    { {  0.0f,  0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f } }, // top
+  };
 
-  /* By binding a VAO, all subsequent VBO, EBO and vertex attribute calls will
-   * be stored inside the VAO. */
-  glBindVertexArray(VAO);
+  {
+    Mesh mesh(vertices);
 
-  glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  /* `glBufferData` is a function specifically targeted to copy user-defined
-   * data into the currently bound buffer. */
-  glBufferData(GL_ARRAY_BUFFER, sizeof vertices, vertices, GL_STATIC_DRAW);
+    while (!glfwWindowShouldClose(window)) {
+      processInput(window);
 
-  /* We can tell OpenGL how it should interpret the vertex data (per vertex
-   * attribute) using `glVertexAttribPointer`. */
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)0);
-  /* Enable the vertex attribute with `glEnableVertexAttribArray`. */
-  glEnableVertexAttribArray(0);
+      glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+      glClear(GL_COLOR_BUFFER_BIT);
 
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
-  glEnableVertexAttribArray(1);
+      shaderProgram->use();
+      mesh.draw();
 
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindVertexArray(0);
-
-  while (!glfwWindowShouldClose(window)) {
-    processInput(window);
-
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    shaderProgram->use();
-    glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    glBindVertexArray(0);
-
-    glfwSwapBuffers(window);
-    /* The `glfwPollEvents` function checks if any events are triggered,
-     * updates the window state, and calls the corresponding functions (which
-     * we can register via callback methods). */
-    glfwPollEvents();
+      glfwSwapBuffers(window);
+      /* The `glfwPollEvents` function checks if any events are triggered,
+      * updates the window state, and calls the corresponding functions (which
+      * we can register via callback methods). */
+      glfwPollEvents();
+    }
   }
-
-  /* Optional: de-allocate all resources once they've outlived their purpose. */
-  glDeleteVertexArrays(1, &VAO);
-  glDeleteBuffers(1, &VBO);
 
   glfwTerminate();
 
