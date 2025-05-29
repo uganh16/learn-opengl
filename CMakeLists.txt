@@ -23,5 +23,6 @@ add_executable(opengl_app
 )
 target_include_directories(opengl_app PRIVATE
   ${boost_pfr_SOURCE_DIR}/include
+  ${PROJECT_SOURCE_DIR}/third_party/stb
 )
 target_link_libraries(opengl_app PRIVATE glad glfw OpenGL::GL)
