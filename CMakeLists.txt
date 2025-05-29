@@ -5,13 +5,12 @@ project(learn-opengl)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(glfw3 CONFIG REQUIRED)
+find_package(glfw3 REQUIRED CONFIG)
 find_package(OpenGL REQUIRED)
 
-file(GLOB GLAD_SOURCES ${PROJECT_SOURCE_DIR}/third_party/glad/src/glad.c)
+add_subdirectory(third_party/glad)
 
 add_executable(opengl_app
-  ${GLAD_SOURCES}
   ${PROJECT_SOURCE_DIR}/src/main.cc
   ${PROJECT_SOURCE_DIR}/src/ShaderProgram.cc
   ${PROJECT_SOURCE_DIR}/src/ShaderProgram.h
@@ -19,4 +18,4 @@ add_executable(opengl_app
 target_include_directories(opengl_app PRIVATE
   ${PROJECT_SOURCE_DIR}/third_party/glad/include
 )
-target_link_libraries(opengl_app PRIVATE glfw OpenGL::GL)
+target_link_libraries(opengl_app PRIVATE glad glfw OpenGL::GL)
