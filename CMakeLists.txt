@@ -9,7 +9,17 @@ if(MSVC)
   set(CMAKE_VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endif()
 
-find_package(glfw3 REQUIRED CONFIG)
+include(FetchContent)
+
+FetchContent_Declare(
+  boost_pfr
+  GIT_REPOSITORY https://github.com/boostorg/pfr.git
+  GIT_TAG boost-1.88.0
+)
+FetchContent_MakeAvailable(boost_pfr)
+
+find_package(glfw3 3.3 REQUIRED CONFIG)
+find_package(glm 0.9.9 REQUIRED CONFIG)
 find_package(OpenGL REQUIRED)
 
 add_subdirectory(third_party/glad)
@@ -25,4 +35,4 @@ target_include_directories(opengl_app PRIVATE
   ${boost_pfr_SOURCE_DIR}/include
   ${PROJECT_SOURCE_DIR}/third_party/stb
 )
-target_link_libraries(opengl_app PRIVATE glad glfw OpenGL::GL)
+target_link_libraries(opengl_app PRIVATE glad glfw glm::glm OpenGL::GL)
