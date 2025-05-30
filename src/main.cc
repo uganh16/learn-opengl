@@ -3,14 +3,21 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 #include "Mesh.h"
 #include "ShaderProgram.h"
 
+int windowWidth  = 800;
+int windowHeight = 600;
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-  glViewport(0, 0, width, height);
+  windowWidth = width;
+  windowHeight = height;
+  glViewport(0, 0, windowWidth, windowHeight);
 }
 
 void printSystemInfo(void) {
@@ -97,7 +104,7 @@ int main(void) {
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-  GLFWwindow* window = glfwCreateWindow(800, 600, "Learn OpenGL", NULL, NULL);
+  GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "Learn OpenGL", NULL, NULL);
   if (window == NULL) {
     std::cerr << "Failed to create GLFW window" << std::endl;
     glfwTerminate();
@@ -116,6 +123,8 @@ int main(void) {
     return -1;
   }
 
+  glEnable(GL_DEPTH_TEST);
+
   printSystemInfo();
 
   std::unique_ptr<ShaderProgram> shaderProgram = ShaderProgram::create(
@@ -127,24 +136,67 @@ int main(void) {
 
   struct Vertex {
     glm::vec3 position;
-    glm::vec3 color;
     glm::vec2 texCoord;
   };
 
   std::vector<Vertex> vertices = {
-    { {  0.5f,  0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 1.0f } }, // top right
-    { {  0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f } }, // bottom right
-    { { -0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }, // bottom left
-    { { -0.5f,  0.5f, 0.0f }, { 1.0f, 1.0f, 0.0f }, { 0.0f, 1.0f } }, // top left
+    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f } },
+    { {  0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f } },
+    { {  0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f } },
+    { {  0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f } },
+    { { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f } },
+    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f } },
+
+    { { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f } },
+    { {  0.5f, -0.5f,  0.5f }, { 1.0f, 0.0f } },
+    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 1.0f } },
+    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 1.0f } },
+    { { -0.5f,  0.5f,  0.5f }, { 0.0f, 1.0f } },
+    { { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f } },
+
+    { { -0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f } },
+    { { -0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f } },
+    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f } },
+    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f } },
+    { { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f } },
+    { { -0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f } },
+
+    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f } },
+    { {  0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f } },
+    { {  0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f } },
+    { {  0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f } },
+    { {  0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f } },
+    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f } },
+
+    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f } },
+    { {  0.5f, -0.5f, -0.5f }, { 1.0f, 1.0f } },
+    { {  0.5f, -0.5f,  0.5f }, { 1.0f, 0.0f } },
+    { {  0.5f, -0.5f,  0.5f }, { 1.0f, 0.0f } },
+    { { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f } },
+    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f } },
+
+    { { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f } },
+    { {  0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f } },
+    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f } },
+    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f } },
+    { { -0.5f,  0.5f,  0.5f }, { 0.0f, 0.0f } },
+    { { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f } },
   };
 
-  Mesh mesh{
-    vertices,
-    {
-      0, 1, 3,
-      1, 2, 3,
-    }
+  glm::vec3 cubePositions[] = {
+    glm::vec3( 0.0f,  0.0f,   0.0f),
+    glm::vec3( 2.0f,  5.0f, -15.0f),
+    glm::vec3(-1.5f, -2.2f,  -2.5f),
+    glm::vec3(-3.8f, -2.0f, -12.3f),
+    glm::vec3( 2.4f, -0.4f,  -3.5f),
+    glm::vec3(-1.7f,  3.0f,  -7.5f),
+    glm::vec3( 1.3f, -2.0f,  -2.5f),
+    glm::vec3( 1.5f,  2.0f,  -2.5f),
+    glm::vec3( 1.5f,  0.2f,  -1.5f),
+    glm::vec3(-1.3f,  1.0f,  -1.5f),
   };
+
+  Mesh mesh{vertices};
 
   GLuint textureID = loadTexture("assets/textures/container.jpg");
   if (textureID == 0) {
@@ -160,7 +212,7 @@ int main(void) {
     processInput(window);
 
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     /* Texture units allows for multiple textures on a single shader program by
      * binding multiple textures, each to a different texture unit. */
@@ -170,7 +222,24 @@ int main(void) {
     glBindTexture(GL_TEXTURE_2D, textureID);
 
     shaderProgram->use();
-    mesh.draw();
+
+    glm::mat4 viewMatrix = glm::mat4(1.0f);
+    viewMatrix = glm::translate(viewMatrix, glm::vec3(0.0f, 0.0f, -3.0f));
+    shaderProgram->uniform("viewMatrix", viewMatrix);
+
+    glm::mat4 projectionMatrix = glm::perspective(
+      glm::radians(45.0f), static_cast<float>(windowWidth) / windowHeight, 0.1f, 100.0f);
+    shaderProgram->uniform("projectionMatrix", projectionMatrix);
+
+    for (int i = 0, n = sizeof cubePositions / sizeof cubePositions[0]; i < n; ++i) {
+      float angle = 20.0f * i;
+      glm::mat4 modelMatrix = glm::mat4(1.0f);
+      modelMatrix = glm::translate(modelMatrix, cubePositions[i]);
+      modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+      shaderProgram->uniform("modelMatrix", modelMatrix);
+
+      mesh.draw();
+    }
 
     glfwSwapBuffers(window);
     /* The `glfwPollEvents` function checks if any events are triggered,

@@ -6,6 +6,8 @@
 #include <unordered_map>
 
 #include <glad/glad.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 class ShaderProgram {
   friend void swap(ShaderProgram& lhs, ShaderProgram& rhs) noexcept;
@@ -43,6 +45,18 @@ public:
 
   void uniform(const std::string& name, GLfloat x, GLfloat y, GLfloat z) const {
     glUniform3f(getUniformLocation(name), x, y, z);
+  }
+
+  void uniform(const std::string& name, const glm::vec3& value) const {
+    glUniform3fv(getUniformLocation(name), 1, glm::value_ptr(value));
+  }
+
+  void uniform(const std::string& name, const glm::mat3& value) const {
+    glUniformMatrix3fv(getUniformLocation(name), 1, GL_FALSE, glm::value_ptr(value));
+  }
+
+  void uniform(const std::string& name, const glm::mat4& value) const {
+    glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, glm::value_ptr(value));
   }
 
 private:
