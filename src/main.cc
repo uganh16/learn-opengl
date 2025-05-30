@@ -1,3 +1,4 @@
+#include <cmath>
 #include <iostream>
 #include <memory>
 
@@ -9,7 +10,6 @@
 #include "Camera.h"
 #include "Mesh.h"
 #include "ShaderProgram.h"
-#include "TextureLoader.h"
 
 float lastFrame = 0.0f;
 float deltaTime = 0.0f; /* Time between current frame and last frame. */
@@ -91,6 +91,106 @@ void processInput(GLFWwindow* window) {
   }
 }
 
+Mesh generateUnitCube(void) {
+  struct Vertex {
+    glm::vec3 position;
+  };
+
+  std::vector<Vertex> vertices = {
+    { { -0.5f, -0.5f, -0.5f } },
+    { {  0.5f, -0.5f, -0.5f } },
+    { {  0.5f,  0.5f, -0.5f } },
+    { {  0.5f,  0.5f, -0.5f } },
+    { { -0.5f,  0.5f, -0.5f } },
+    { { -0.5f, -0.5f, -0.5f } },
+
+    { { -0.5f, -0.5f,  0.5f } },
+    { {  0.5f, -0.5f,  0.5f } },
+    { {  0.5f,  0.5f,  0.5f } },
+    { {  0.5f,  0.5f,  0.5f } },
+    { { -0.5f,  0.5f,  0.5f } },
+    { { -0.5f, -0.5f,  0.5f } },
+
+    { { -0.5f,  0.5f,  0.5f } },
+    { { -0.5f,  0.5f, -0.5f } },
+    { { -0.5f, -0.5f, -0.5f } },
+    { { -0.5f, -0.5f, -0.5f } },
+    { { -0.5f, -0.5f,  0.5f } },
+    { { -0.5f,  0.5f,  0.5f } },
+
+    { {  0.5f,  0.5f,  0.5f } },
+    { {  0.5f,  0.5f, -0.5f } },
+    { {  0.5f, -0.5f, -0.5f } },
+    { {  0.5f, -0.5f, -0.5f } },
+    { {  0.5f, -0.5f,  0.5f } },
+    { {  0.5f,  0.5f,  0.5f } },
+
+    { { -0.5f, -0.5f, -0.5f } },
+    { {  0.5f, -0.5f, -0.5f } },
+    { {  0.5f, -0.5f,  0.5f } },
+    { {  0.5f, -0.5f,  0.5f } },
+    { { -0.5f, -0.5f,  0.5f } },
+    { { -0.5f, -0.5f, -0.5f } },
+
+    { { -0.5f,  0.5f, -0.5f } },
+    { {  0.5f,  0.5f, -0.5f } },
+    { {  0.5f,  0.5f,  0.5f } },
+    { {  0.5f,  0.5f,  0.5f } },
+    { { -0.5f,  0.5f,  0.5f } },
+    { { -0.5f,  0.5f, -0.5f } },
+  };
+
+  return Mesh(vertices);
+}
+
+Mesh generateUnitSphere(int sectors = 36, int stacks = 18) {
+  struct Vertex {
+    glm::vec3 position;
+  };
+
+  std::vector<Vertex> vertices;
+  std::vector<unsigned int> indices;
+
+  const float PI = 3.1415926f;
+  float sectorStep = 2 * PI / sectors;
+  float stackStep = PI / stacks;
+
+  for (int i = 0; i <= stacks; ++i) {
+    float stackAngle = PI / 2 - i * stackStep;
+    float xz = std::cos(stackAngle);
+    float y = std::sin(stackAngle);
+
+    for (int j = 0; j <= sectors; ++j) {
+      float sectorAngle = j * sectorStep;
+      float x = xz * std::cos(sectorAngle);
+      float z = xz * std::sin(sectorAngle);
+
+      vertices.push_back(Vertex{ glm::vec3(x, y, z) });
+    }
+  }
+
+  for (int i = 0; i < stacks; ++i) {
+    int k1 = i * (sectors + 1);
+    int k2 = k1 + sectors + 1;
+
+    for (int j = 0; j < sectors; ++j, ++k1, ++k2) {
+      if (i != 0) {
+        indices.push_back(k1);
+        indices.push_back(k2);
+        indices.push_back(k1 + 1);
+      }
+
+      if (i != stacks - 1) {
+        indices.push_back(k1 + 1);
+        indices.push_back(k2);
+        indices.push_back(k2 + 1);
+      }
+    }
+  }
+
+  return Mesh(vertices, indices);
+}
+
 int main(void) {
   if (!glfwInit()) {
     std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -138,86 +238,20 @@ int main(void) {
 
   printSystemInfo();
 
-  std::unique_ptr<ShaderProgram> shaderProgram = ShaderProgram::create(
-      "assets/shaders/shader.vs", "assets/shaders/shader.fs");
-  if (!shaderProgram) {
+  std::unique_ptr<ShaderProgram> cubeShader = ShaderProgram::create(
+    "assets/shaders/cubeShader.vs", "assets/shaders/cubeShader.fs");
+  std::unique_ptr<ShaderProgram> lightShader = ShaderProgram::create(
+    "assets/shaders/lightShader.vs", "assets/shaders/lightShader.fs");
+
+  if (!cubeShader || !lightShader) {
     glfwTerminate();
     return -1;
   }
 
-  struct Vertex {
-    glm::vec3 position;
-    glm::vec2 texCoord;
-  };
+  Mesh cube = generateUnitCube();
 
-  std::vector<Vertex> vertices = {
-    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f } },
-    { {  0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f } },
-    { {  0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f } },
-    { {  0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f } },
-    { { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f } },
-    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f } },
-
-    { { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f } },
-    { {  0.5f, -0.5f,  0.5f }, { 1.0f, 0.0f } },
-    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 1.0f } },
-    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 1.0f } },
-    { { -0.5f,  0.5f,  0.5f }, { 0.0f, 1.0f } },
-    { { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f } },
-
-    { { -0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f } },
-    { { -0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f } },
-    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f } },
-    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f } },
-    { { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f } },
-    { { -0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f } },
-
-    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f } },
-    { {  0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f } },
-    { {  0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f } },
-    { {  0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f } },
-    { {  0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f } },
-    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f } },
-
-    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f } },
-    { {  0.5f, -0.5f, -0.5f }, { 1.0f, 1.0f } },
-    { {  0.5f, -0.5f,  0.5f }, { 1.0f, 0.0f } },
-    { {  0.5f, -0.5f,  0.5f }, { 1.0f, 0.0f } },
-    { { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f } },
-    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f } },
-
-    { { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f } },
-    { {  0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f } },
-    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f } },
-    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f } },
-    { { -0.5f,  0.5f,  0.5f }, { 0.0f, 0.0f } },
-    { { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f } },
-  };
-
-  glm::vec3 cubePositions[] = {
-    glm::vec3( 0.0f,  0.0f,   0.0f),
-    glm::vec3( 2.0f,  5.0f, -15.0f),
-    glm::vec3(-1.5f, -2.2f,  -2.5f),
-    glm::vec3(-3.8f, -2.0f, -12.3f),
-    glm::vec3( 2.4f, -0.4f,  -3.5f),
-    glm::vec3(-1.7f,  3.0f,  -7.5f),
-    glm::vec3( 1.3f, -2.0f,  -2.5f),
-    glm::vec3( 1.5f,  2.0f,  -2.5f),
-    glm::vec3( 1.5f,  0.2f,  -1.5f),
-    glm::vec3(-1.3f,  1.0f,  -1.5f),
-  };
-
-  Mesh mesh{vertices};
-
-  GLuint textureID = TextureLoader::load("assets/textures/container.jpg");
-  if (textureID == 0) {
-    glfwTerminate();
-    return -1;
-  }
-
-  /* Don't forget to activate/use the shader before setting uniforms! */
-  shaderProgram->use();
-  shaderProgram->uniform("ourTexture", 0);
+  Mesh light = generateUnitSphere();
+  glm::vec3 lightPosition(1.2f, 1.0f, 2.0f);
 
   while (!glfwWindowShouldClose(window)) {
     float currentFrame = static_cast<float>(glfwGetTime());
@@ -226,32 +260,30 @@ int main(void) {
 
     processInput(window);
 
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    /* Texture units allows for multiple textures on a single shader program by
-     * binding multiple textures, each to a different texture unit. */
-    glActiveTexture(GL_TEXTURE0);
-    /* After activating a texture unit, a subsequent `glBindTexture` call will
-     * bind that texture to the currently active texture unit. */
-    glBindTexture(GL_TEXTURE_2D, textureID);
+    glm::mat4 projectionMatrix = camera.getProjectionMatrix(
+      static_cast<float>(windowWidth) / windowHeight, 0.1f, 100.0f);
+    glm::mat4 viewMatrix = camera.getViewMatrix();
 
-    shaderProgram->use();
-    shaderProgram->uniform("viewMatrix", camera.getViewMatrix());
-    shaderProgram->uniform(
-      "projectionMatrix",
-      camera.getProjectionMatrix(
-        static_cast<float>(windowWidth) / windowHeight, 0.1f, 100.0f));
+    cubeShader->use();
+    cubeShader->uniform("objectColor", 1.0f, 0.5f, 0.31f);
+    cubeShader->uniform("lightColor", 1.0f, 1.0f, 1.0f);
+    glm::mat4 cubeModelMatrix = glm::mat4(1.0f);
+    cubeShader->uniform("modelMatrix", cubeModelMatrix);
+    cubeShader->uniform("viewMatrix", viewMatrix);
+    cubeShader->uniform("projectionMatrix", projectionMatrix);
+    cube.draw();
 
-    for (int i = 0, n = sizeof cubePositions / sizeof cubePositions[0]; i < n; ++i) {
-      float angle = 20.0f * i;
-      glm::mat4 modelMatrix = glm::mat4(1.0f);
-      modelMatrix = glm::translate(modelMatrix, cubePositions[i]);
-      modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-      shaderProgram->uniform("modelMatrix", modelMatrix);
-
-      mesh.draw();
-    }
+    lightShader->use();
+    glm::mat4 lightModelMatrix = glm::mat4(1.0f);
+    lightModelMatrix = glm::translate(lightModelMatrix, lightPosition);
+    lightModelMatrix = glm::scale(lightModelMatrix, glm::vec3(0.1f));
+    lightShader->uniform("modelMatrix", lightModelMatrix);
+    lightShader->uniform("viewMatrix", viewMatrix);
+    lightShader->uniform("projectionMatrix", projectionMatrix);
+    light.draw();
 
     glfwSwapBuffers(window);
     /* The `glfwPollEvents` function checks if any events are triggered,
@@ -259,8 +291,6 @@ int main(void) {
     * we can register via callback methods). */
     glfwPollEvents();
   }
-
-  glDeleteTextures(1, &textureID);
 
   glfwTerminate();
 
