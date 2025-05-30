@@ -269,20 +269,36 @@ int main(void) {
     glm::mat4 viewMatrix = camera.getViewMatrix();
 
     cubeShader->use();
-    cubeShader->uniform("lightPos", lightPosition);
     cubeShader->uniform("viewPos", camera.getPosition());
-    cubeShader->uniform("objectColor", 1.0f, 0.5f, 0.31f);
-    cubeShader->uniform("lightColor", 1.0f, 1.0f, 1.0f);
-
+    /* Light properties */
+    glm::vec3 lightColor{
+      std::sin(currentFrame) * 2.0f,
+      std::sin(currentFrame) * 0.7f,
+      std::sin(currentFrame) * 1.3f
+    };
+    glm::vec3 lightDiffuseColor = lightColor * 0.5f;
+    glm::vec3 lightAmbientColor = lightDiffuseColor * 0.2f;
+    cubeShader->uniform("light.position", lightPosition);
+    cubeShader->uniform("light.ambient", lightAmbientColor);
+    cubeShader->uniform("light.diffuse", lightDiffuseColor);
+    cubeShader->uniform("light.specular", 1.0f, 1.0f, 1.0f);
+    /* Material properties */
+    cubeShader->uniform("material.ambient", 1.0f, 0.5f, 0.31f);
+    cubeShader->uniform("material.diffuse", 1.0f, 0.5f, 0.31f);
+    cubeShader->uniform("material.specular", 0.5f, 0.5f, 0.5f);
+    cubeShader->uniform("material.shininess", 32.0f);
+    /* Transformations */
     glm::mat4 cubeModelMatrix = glm::mat4(1.0f);
     glm::mat3 cubeNormalMatrix = glm::mat3(glm::transpose(glm::inverse(cubeModelMatrix)));
     cubeShader->uniform("normalMatrix", cubeNormalMatrix);
     cubeShader->uniform("modelMatrix", cubeModelMatrix);
     cubeShader->uniform("viewMatrix", viewMatrix);
     cubeShader->uniform("projectionMatrix", projectionMatrix);
+    /* Render the cube. */
     cube.draw();
 
     lightShader->use();
+    lightShader->uniform("lightColor", lightColor);
     glm::mat4 lightModelMatrix = glm::mat4(1.0f);
     lightModelMatrix = glm::translate(lightModelMatrix, lightPosition);
     lightModelMatrix = glm::scale(lightModelMatrix, glm::vec3(0.1f));
