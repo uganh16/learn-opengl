@@ -94,50 +94,51 @@ void processInput(GLFWwindow* window) {
 Mesh generateUnitCube(void) {
   struct Vertex {
     glm::vec3 position;
+    glm::vec3 normal;
   };
 
   std::vector<Vertex> vertices = {
-    { { -0.5f, -0.5f, -0.5f } },
-    { {  0.5f, -0.5f, -0.5f } },
-    { {  0.5f,  0.5f, -0.5f } },
-    { {  0.5f,  0.5f, -0.5f } },
-    { { -0.5f,  0.5f, -0.5f } },
-    { { -0.5f, -0.5f, -0.5f } },
+    { { -0.5f, -0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
+    { {  0.5f, -0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
+    { {  0.5f,  0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
+    { {  0.5f,  0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
+    { { -0.5f,  0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
+    { { -0.5f, -0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
 
-    { { -0.5f, -0.5f,  0.5f } },
-    { {  0.5f, -0.5f,  0.5f } },
-    { {  0.5f,  0.5f,  0.5f } },
-    { {  0.5f,  0.5f,  0.5f } },
-    { { -0.5f,  0.5f,  0.5f } },
-    { { -0.5f, -0.5f,  0.5f } },
+    { { -0.5f, -0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
+    { {  0.5f, -0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
+    { {  0.5f,  0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
+    { {  0.5f,  0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
+    { { -0.5f,  0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
+    { { -0.5f, -0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
 
-    { { -0.5f,  0.5f,  0.5f } },
-    { { -0.5f,  0.5f, -0.5f } },
-    { { -0.5f, -0.5f, -0.5f } },
-    { { -0.5f, -0.5f, -0.5f } },
-    { { -0.5f, -0.5f,  0.5f } },
-    { { -0.5f,  0.5f,  0.5f } },
+    { { -0.5f,  0.5f,  0.5f }, { -1.0f,  0.0f,  0.0f } },
+    { { -0.5f,  0.5f, -0.5f }, { -1.0f,  0.0f,  0.0f } },
+    { { -0.5f, -0.5f, -0.5f }, { -1.0f,  0.0f,  0.0f } },
+    { { -0.5f, -0.5f, -0.5f }, { -1.0f,  0.0f,  0.0f } },
+    { { -0.5f, -0.5f,  0.5f }, { -1.0f,  0.0f,  0.0f } },
+    { { -0.5f,  0.5f,  0.5f }, { -1.0f,  0.0f,  0.0f } },
 
-    { {  0.5f,  0.5f,  0.5f } },
-    { {  0.5f,  0.5f, -0.5f } },
-    { {  0.5f, -0.5f, -0.5f } },
-    { {  0.5f, -0.5f, -0.5f } },
-    { {  0.5f, -0.5f,  0.5f } },
-    { {  0.5f,  0.5f,  0.5f } },
+    { {  0.5f,  0.5f,  0.5f }, {  1.0f,  0.0f,  0.0f } },
+    { {  0.5f,  0.5f, -0.5f }, {  1.0f,  0.0f,  0.0f } },
+    { {  0.5f, -0.5f, -0.5f }, {  1.0f,  0.0f,  0.0f } },
+    { {  0.5f, -0.5f, -0.5f }, {  1.0f,  0.0f,  0.0f } },
+    { {  0.5f, -0.5f,  0.5f }, {  1.0f,  0.0f,  0.0f } },
+    { {  0.5f,  0.5f,  0.5f }, {  1.0f,  0.0f,  0.0f } },
 
-    { { -0.5f, -0.5f, -0.5f } },
-    { {  0.5f, -0.5f, -0.5f } },
-    { {  0.5f, -0.5f,  0.5f } },
-    { {  0.5f, -0.5f,  0.5f } },
-    { { -0.5f, -0.5f,  0.5f } },
-    { { -0.5f, -0.5f, -0.5f } },
+    { { -0.5f, -0.5f, -0.5f }, {  0.0f, -1.0f,  0.0f } },
+    { {  0.5f, -0.5f, -0.5f }, {  0.0f, -1.0f,  0.0f } },
+    { {  0.5f, -0.5f,  0.5f }, {  0.0f, -1.0f,  0.0f } },
+    { {  0.5f, -0.5f,  0.5f }, {  0.0f, -1.0f,  0.0f } },
+    { { -0.5f, -0.5f,  0.5f }, {  0.0f, -1.0f,  0.0f } },
+    { { -0.5f, -0.5f, -0.5f }, {  0.0f, -1.0f,  0.0f } },
 
-    { { -0.5f,  0.5f, -0.5f } },
-    { {  0.5f,  0.5f, -0.5f } },
-    { {  0.5f,  0.5f,  0.5f } },
-    { {  0.5f,  0.5f,  0.5f } },
-    { { -0.5f,  0.5f,  0.5f } },
-    { { -0.5f,  0.5f, -0.5f } },
+    { { -0.5f,  0.5f, -0.5f }, {  0.0f,  1.0f,  0.0f } },
+    { {  0.5f,  0.5f, -0.5f }, {  0.0f,  1.0f,  0.0f } },
+    { {  0.5f,  0.5f,  0.5f }, {  0.0f,  1.0f,  0.0f } },
+    { {  0.5f,  0.5f,  0.5f }, {  0.0f,  1.0f,  0.0f } },
+    { { -0.5f,  0.5f,  0.5f }, {  0.0f,  1.0f,  0.0f } },
+    { { -0.5f,  0.5f, -0.5f }, {  0.0f,  1.0f,  0.0f } },
   };
 
   return Mesh(vertices);
@@ -268,9 +269,14 @@ int main(void) {
     glm::mat4 viewMatrix = camera.getViewMatrix();
 
     cubeShader->use();
+    cubeShader->uniform("lightPos", lightPosition);
+    cubeShader->uniform("viewPos", camera.getPosition());
     cubeShader->uniform("objectColor", 1.0f, 0.5f, 0.31f);
     cubeShader->uniform("lightColor", 1.0f, 1.0f, 1.0f);
+
     glm::mat4 cubeModelMatrix = glm::mat4(1.0f);
+    glm::mat3 cubeNormalMatrix = glm::mat3(glm::transpose(glm::inverse(cubeModelMatrix)));
+    cubeShader->uniform("normalMatrix", cubeNormalMatrix);
     cubeShader->uniform("modelMatrix", cubeModelMatrix);
     cubeShader->uniform("viewMatrix", viewMatrix);
     cubeShader->uniform("projectionMatrix", projectionMatrix);
