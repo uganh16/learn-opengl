@@ -32,6 +32,8 @@ add_executable(opengl_app
   ${PROJECT_SOURCE_DIR}/src/Mesh.h
   ${PROJECT_SOURCE_DIR}/src/ShaderProgram.cc
   ${PROJECT_SOURCE_DIR}/src/ShaderProgram.h
+  ${PROJECT_SOURCE_DIR}/src/TextureLoader.cc
+  ${PROJECT_SOURCE_DIR}/src/TextureLoader.h
 )
 target_include_directories(opengl_app PRIVATE
   ${boost_pfr_SOURCE_DIR}/include

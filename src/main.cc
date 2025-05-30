@@ -5,12 +5,11 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
 
 #include "Camera.h"
 #include "Mesh.h"
 #include "ShaderProgram.h"
+#include "TextureLoader.h"
 
 float lastFrame = 0.0f;
 float deltaTime = 0.0f; /* Time between current frame and last frame. */
@@ -90,52 +89,6 @@ void processInput(GLFWwindow* window) {
   if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
     camera.processMovement(CameraMovement::RIGHT, deltaTime);
   }
-}
-
-GLuint loadTexture(const std::string& path, bool flipVertically = true) {
-  stbi_set_flip_vertically_on_load(flipVertically);
-
-  /* Load and generate the texture. */
-  int width, height, nrChannels;
-  stbi_uc* image = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
-  if (image == NULL) {
-    std::cerr << "Failed to load image: " << path << " (" << stbi_failure_reason() << ")" << std::endl;
-    return 0;
-  }
-
-  GLenum format;
-  if (nrChannels == 1) {
-    format = GL_RED;
-  } else if (nrChannels == 3) {
-    format = GL_RGB;
-  } else if (nrChannels == 4) {
-    format = GL_RGBA;
-  } else {
-    std::cerr << "Unsupported image channels: " << nrChannels << std::endl;
-    stbi_image_free(image);
-    return 0;
-  }
-
-  GLuint textureID;
-  glGenTextures(1, &textureID);
-
-  /* Bind it so any subsequent texture commands will configure the currently
-   * bound texture. */
-  glBindTexture(GL_TEXTURE_2D, textureID);
-
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-  glGenerateMipmap(GL_TEXTURE_2D);
-
-  /* Set the texture wrapping/filtering options (on the currently bound texture
-   * object. */
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-  stbi_image_free(image);
-
-  return textureID;
 }
 
 int main(void) {
@@ -256,7 +209,7 @@ int main(void) {
 
   Mesh mesh{vertices};
 
-  GLuint textureID = loadTexture("assets/textures/container.jpg");
+  GLuint textureID = TextureLoader::load("assets/textures/container.jpg");
   if (textureID == 0) {
     glfwTerminate();
     return -1;
