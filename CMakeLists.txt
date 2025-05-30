@@ -25,6 +25,8 @@ find_package(OpenGL REQUIRED)
 add_subdirectory(third_party/glad)
 
 add_executable(opengl_app
+  ${PROJECT_SOURCE_DIR}/src/Camera.cc
+  ${PROJECT_SOURCE_DIR}/src/Camera.h
   ${PROJECT_SOURCE_DIR}/src/main.cc
   ${PROJECT_SOURCE_DIR}/src/Mesh.cc
   ${PROJECT_SOURCE_DIR}/src/Mesh.h

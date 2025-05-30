@@ -8,16 +8,49 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#include "Camera.h"
 #include "Mesh.h"
 #include "ShaderProgram.h"
 
+float lastFrame = 0.0f;
+float deltaTime = 0.0f; /* Time between current frame and last frame. */
+
 int windowWidth  = 800;
 int windowHeight = 600;
+
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+
+/* Initialize the last mouse positions to be in the center of screen. */
+float lastX;
+float lastY;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
   windowWidth = width;
   windowHeight = height;
   glViewport(0, 0, windowWidth, windowHeight);
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+  static bool bFirstMouse = true;
+
+  if (bFirstMouse) {
+    lastX = xpos;
+    lastY = ypos;
+    bFirstMouse = false;
+  }
+
+  float xoffset = static_cast<float>(xpos) - lastX;
+  /* Reversed since y-coordinates range from buttom to top. */
+  float yoffset = lastY - static_cast<float>(ypos);
+
+  lastX = xpos;
+  lastY = ypos;
+
+  camera.processMouseMovement(xoffset, yoffset);
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
+  camera.processMouseScroll(static_cast<float>(yoffset));
 }
 
 void printSystemInfo(void) {
@@ -42,6 +75,20 @@ void printSystemInfo(void) {
 void processInput(GLFWwindow* window) {
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
     glfwSetWindowShouldClose(window, GLFW_TRUE);
+  }
+
+  float cameraSpeed = 2.5f * deltaTime;
+  if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+    camera.processMovement(CameraMovement::FORWARD, deltaTime);
+  }
+  if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+    camera.processMovement(CameraMovement::BACKWARD, deltaTime);
+  }
+  if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+    camera.processMovement(CameraMovement::LEFT, deltaTime);
+  }
+  if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+    camera.processMovement(CameraMovement::RIGHT, deltaTime);
   }
 }
 
@@ -116,6 +163,17 @@ int main(void) {
   glfwMakeContextCurrent(window);
 
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+  glfwSetCursorPosCallback(window, mouse_callback);
+  glfwSetScrollCallback(window, scroll_callback);
+
+  /**
+   * Tell GLFW to capture the mouse.
+   *
+   * Capturing a cursor means that, once the application has focus, the mouse
+   * stays within the center of the window (unless the application loses focus
+   * or quits).
+   */
+  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
     std::cerr << "Failed to initialize GLAD" << std::endl;
@@ -209,6 +267,10 @@ int main(void) {
   shaderProgram->uniform("ourTexture", 0);
 
   while (!glfwWindowShouldClose(window)) {
+    float currentFrame = static_cast<float>(glfwGetTime());
+    deltaTime = currentFrame - lastFrame;
+    lastFrame = currentFrame;
+
     processInput(window);
 
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -222,14 +284,11 @@ int main(void) {
     glBindTexture(GL_TEXTURE_2D, textureID);
 
     shaderProgram->use();
-
-    glm::mat4 viewMatrix = glm::mat4(1.0f);
-    viewMatrix = glm::translate(viewMatrix, glm::vec3(0.0f, 0.0f, -3.0f));
-    shaderProgram->uniform("viewMatrix", viewMatrix);
-
-    glm::mat4 projectionMatrix = glm::perspective(
-      glm::radians(45.0f), static_cast<float>(windowWidth) / windowHeight, 0.1f, 100.0f);
-    shaderProgram->uniform("projectionMatrix", projectionMatrix);
+    shaderProgram->uniform("viewMatrix", camera.getViewMatrix());
+    shaderProgram->uniform(
+      "projectionMatrix",
+      camera.getProjectionMatrix(
+        static_cast<float>(windowWidth) / windowHeight, 0.1f, 100.0f));
 
     for (int i = 0, n = sizeof cubePositions / sizeof cubePositions[0]; i < n; ++i) {
       float angle = 20.0f * i;
