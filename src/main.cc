@@ -10,6 +10,7 @@
 #include "Camera.h"
 #include "Mesh.h"
 #include "ShaderProgram.h"
+#include "TextureLoader.h"
 
 float lastFrame = 0.0f;
 float deltaTime = 0.0f; /* Time between current frame and last frame. */
@@ -95,50 +96,51 @@ Mesh generateUnitCube(void) {
   struct Vertex {
     glm::vec3 position;
     glm::vec3 normal;
+    glm::vec2 texCoord;
   };
 
   std::vector<Vertex> vertices = {
-    { { -0.5f, -0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
-    { {  0.5f, -0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
-    { {  0.5f,  0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
-    { {  0.5f,  0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
-    { { -0.5f,  0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
-    { { -0.5f, -0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
+    { { -0.5f, -0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f }, { 0.0f, 0.0f } },
+    { {  0.5f, -0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f }, { 1.0f, 0.0f } },
+    { {  0.5f,  0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f }, { 1.0f, 1.0f } },
+    { {  0.5f,  0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f }, { 1.0f, 1.0f } },
+    { { -0.5f,  0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f }, { 0.0f, 1.0f } },
+    { { -0.5f, -0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f }, { 0.0f, 0.0f } },
 
-    { { -0.5f, -0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
-    { {  0.5f, -0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
-    { {  0.5f,  0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
-    { {  0.5f,  0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
-    { { -0.5f,  0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
-    { { -0.5f, -0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
+    { { -0.5f, -0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f }, { 0.0f, 0.0f } },
+    { {  0.5f, -0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f }, { 1.0f, 0.0f } },
+    { {  0.5f,  0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f }, { 1.0f, 1.0f } },
+    { {  0.5f,  0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f }, { 1.0f, 1.0f } },
+    { { -0.5f,  0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f }, { 0.0f, 1.0f } },
+    { { -0.5f, -0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f }, { 0.0f, 0.0f } },
 
-    { { -0.5f,  0.5f,  0.5f }, { -1.0f,  0.0f,  0.0f } },
-    { { -0.5f,  0.5f, -0.5f }, { -1.0f,  0.0f,  0.0f } },
-    { { -0.5f, -0.5f, -0.5f }, { -1.0f,  0.0f,  0.0f } },
-    { { -0.5f, -0.5f, -0.5f }, { -1.0f,  0.0f,  0.0f } },
-    { { -0.5f, -0.5f,  0.5f }, { -1.0f,  0.0f,  0.0f } },
-    { { -0.5f,  0.5f,  0.5f }, { -1.0f,  0.0f,  0.0f } },
+    { { -0.5f,  0.5f,  0.5f }, { -1.0f,  0.0f,  0.0f }, { 1.0f, 0.0f } },
+    { { -0.5f,  0.5f, -0.5f }, { -1.0f,  0.0f,  0.0f }, { 1.0f, 1.0f } },
+    { { -0.5f, -0.5f, -0.5f }, { -1.0f,  0.0f,  0.0f }, { 0.0f, 1.0f } },
+    { { -0.5f, -0.5f, -0.5f }, { -1.0f,  0.0f,  0.0f }, { 0.0f, 1.0f } },
+    { { -0.5f, -0.5f,  0.5f }, { -1.0f,  0.0f,  0.0f }, { 0.0f, 0.0f } },
+    { { -0.5f,  0.5f,  0.5f }, { -1.0f,  0.0f,  0.0f }, { 1.0f, 0.0f } },
 
-    { {  0.5f,  0.5f,  0.5f }, {  1.0f,  0.0f,  0.0f } },
-    { {  0.5f,  0.5f, -0.5f }, {  1.0f,  0.0f,  0.0f } },
-    { {  0.5f, -0.5f, -0.5f }, {  1.0f,  0.0f,  0.0f } },
-    { {  0.5f, -0.5f, -0.5f }, {  1.0f,  0.0f,  0.0f } },
-    { {  0.5f, -0.5f,  0.5f }, {  1.0f,  0.0f,  0.0f } },
-    { {  0.5f,  0.5f,  0.5f }, {  1.0f,  0.0f,  0.0f } },
+    { {  0.5f,  0.5f,  0.5f }, {  1.0f,  0.0f,  0.0f }, { 1.0f, 0.0f } },
+    { {  0.5f,  0.5f, -0.5f }, {  1.0f,  0.0f,  0.0f }, { 1.0f, 1.0f } },
+    { {  0.5f, -0.5f, -0.5f }, {  1.0f,  0.0f,  0.0f }, { 0.0f, 1.0f } },
+    { {  0.5f, -0.5f, -0.5f }, {  1.0f,  0.0f,  0.0f }, { 0.0f, 1.0f } },
+    { {  0.5f, -0.5f,  0.5f }, {  1.0f,  0.0f,  0.0f }, { 0.0f, 0.0f } },
+    { {  0.5f,  0.5f,  0.5f }, {  1.0f,  0.0f,  0.0f }, { 1.0f, 0.0f } },
 
-    { { -0.5f, -0.5f, -0.5f }, {  0.0f, -1.0f,  0.0f } },
-    { {  0.5f, -0.5f, -0.5f }, {  0.0f, -1.0f,  0.0f } },
-    { {  0.5f, -0.5f,  0.5f }, {  0.0f, -1.0f,  0.0f } },
-    { {  0.5f, -0.5f,  0.5f }, {  0.0f, -1.0f,  0.0f } },
-    { { -0.5f, -0.5f,  0.5f }, {  0.0f, -1.0f,  0.0f } },
-    { { -0.5f, -0.5f, -0.5f }, {  0.0f, -1.0f,  0.0f } },
+    { { -0.5f, -0.5f, -0.5f }, {  0.0f, -1.0f,  0.0f }, { 0.0f, 1.0f } },
+    { {  0.5f, -0.5f, -0.5f }, {  0.0f, -1.0f,  0.0f }, { 1.0f, 1.0f } },
+    { {  0.5f, -0.5f,  0.5f }, {  0.0f, -1.0f,  0.0f }, { 1.0f, 0.0f } },
+    { {  0.5f, -0.5f,  0.5f }, {  0.0f, -1.0f,  0.0f }, { 1.0f, 0.0f } },
+    { { -0.5f, -0.5f,  0.5f }, {  0.0f, -1.0f,  0.0f }, { 0.0f, 0.0f } },
+    { { -0.5f, -0.5f, -0.5f }, {  0.0f, -1.0f,  0.0f }, { 0.0f, 1.0f } },
 
-    { { -0.5f,  0.5f, -0.5f }, {  0.0f,  1.0f,  0.0f } },
-    { {  0.5f,  0.5f, -0.5f }, {  0.0f,  1.0f,  0.0f } },
-    { {  0.5f,  0.5f,  0.5f }, {  0.0f,  1.0f,  0.0f } },
-    { {  0.5f,  0.5f,  0.5f }, {  0.0f,  1.0f,  0.0f } },
-    { { -0.5f,  0.5f,  0.5f }, {  0.0f,  1.0f,  0.0f } },
-    { { -0.5f,  0.5f, -0.5f }, {  0.0f,  1.0f,  0.0f } },
+    { { -0.5f,  0.5f, -0.5f }, {  0.0f,  1.0f,  0.0f }, { 0.0f, 1.0f } },
+    { {  0.5f,  0.5f, -0.5f }, {  0.0f,  1.0f,  0.0f }, { 1.0f, 1.0f } },
+    { {  0.5f,  0.5f,  0.5f }, {  0.0f,  1.0f,  0.0f }, { 1.0f, 0.0f } },
+    { {  0.5f,  0.5f,  0.5f }, {  0.0f,  1.0f,  0.0f }, { 1.0f, 0.0f } },
+    { { -0.5f,  0.5f,  0.5f }, {  0.0f,  1.0f,  0.0f }, { 0.0f, 0.0f } },
+    { { -0.5f,  0.5f, -0.5f }, {  0.0f,  1.0f,  0.0f }, { 0.0f, 1.0f } },
   };
 
   return Mesh(vertices);
@@ -254,6 +256,13 @@ int main(void) {
   Mesh light = generateUnitSphere();
   glm::vec3 lightPosition(1.2f, 1.0f, 2.0f);
 
+  GLuint diffuseMap = TextureLoader::load("assets/textures/container2.png");
+  GLuint specularMap = TextureLoader::load("assets/textures/container2_specular.png");
+  if (diffuseMap == 0 || specularMap == 0) {
+    glfwTerminate();
+    return -1;
+  }
+
   while (!glfwWindowShouldClose(window)) {
     float currentFrame = static_cast<float>(glfwGetTime());
     deltaTime = currentFrame - lastFrame;
@@ -271,21 +280,17 @@ int main(void) {
     cubeShader->use();
     cubeShader->uniform("viewPos", camera.getPosition());
     /* Light properties */
-    glm::vec3 lightColor{
-      std::sin(currentFrame) * 2.0f,
-      std::sin(currentFrame) * 0.7f,
-      std::sin(currentFrame) * 1.3f
-    };
-    glm::vec3 lightDiffuseColor = lightColor * 0.5f;
-    glm::vec3 lightAmbientColor = lightDiffuseColor * 0.2f;
     cubeShader->uniform("light.position", lightPosition);
-    cubeShader->uniform("light.ambient", lightAmbientColor);
-    cubeShader->uniform("light.diffuse", lightDiffuseColor);
+    cubeShader->uniform("light.ambient", 0.2f, 0.2f, 0.2f);
+    cubeShader->uniform("light.diffuse", 0.5f, 0.5f, 0.5f);
     cubeShader->uniform("light.specular", 1.0f, 1.0f, 1.0f);
     /* Material properties */
-    cubeShader->uniform("material.ambient", 1.0f, 0.5f, 0.31f);
-    cubeShader->uniform("material.diffuse", 1.0f, 0.5f, 0.31f);
-    cubeShader->uniform("material.specular", 0.5f, 0.5f, 0.5f);
+    cubeShader->uniform("material.diffuse", 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, diffuseMap);
+    cubeShader->uniform("material.specular", 1);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, specularMap);
     cubeShader->uniform("material.shininess", 32.0f);
     /* Transformations */
     glm::mat4 cubeModelMatrix = glm::mat4(1.0f);
@@ -298,7 +303,6 @@ int main(void) {
     cube.draw();
 
     lightShader->use();
-    lightShader->uniform("lightColor", lightColor);
     glm::mat4 lightModelMatrix = glm::mat4(1.0f);
     lightModelMatrix = glm::translate(lightModelMatrix, lightPosition);
     lightModelMatrix = glm::scale(lightModelMatrix, glm::vec3(0.1f));
