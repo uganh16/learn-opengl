@@ -7,19 +7,29 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
+class ShaderProgram;
+
+struct Texture {
+  GLuint id;
+  std::string type;
+  std::string path;
+};
+
 class Mesh {
 public:
   template <typename VertexType>
-  explicit Mesh(const std::vector<VertexType>& vertices)
+  explicit Mesh(const std::vector<VertexType>& vertices, std::vector<Texture> textures = {})
     : EBO(0)
-    , count(vertices.size()) {
+    , count(vertices.size())
+    , textures(std::move(textures)) {
     setupVertices(vertices);
     unbindBuffers();
   }
 
   template <typename VertexType>
-  Mesh(const std::vector<VertexType>& vertices, const std::vector<GLuint>& indices)
-    : count(indices.size()) {
+  Mesh(const std::vector<VertexType>& vertices, const std::vector<GLuint>& indices, std::vector<Texture> textures = {})
+    : count(indices.size())
+    , textures(std::move(textures)) {
     setupVertices(vertices);
     setupIndices(indices);
     unbindBuffers();
@@ -53,7 +63,7 @@ public:
     swap(lhs.count, rhs.count);
   }
 
-  void draw(void) const;
+  void draw(const ShaderProgram& shaderProgram) const;
 
 private:
   template <typename VertexType>
@@ -67,6 +77,7 @@ private:
   GLuint VAO;
   GLuint VBO, EBO;
   GLsizei count;
+  std::vector<Texture> textures;
 };
 
 template <typename VertexType>

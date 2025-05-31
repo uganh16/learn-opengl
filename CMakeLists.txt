@@ -18,6 +18,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(boost_pfr)
 
+find_package(assimp REQUIRED)
 find_package(glfw3 3.3 REQUIRED CONFIG)
 find_package(glm 0.9.9 REQUIRED CONFIG)
 find_package(OpenGL REQUIRED)
@@ -30,6 +31,8 @@ add_executable(opengl_app
   ${PROJECT_SOURCE_DIR}/src/main.cc
   ${PROJECT_SOURCE_DIR}/src/Mesh.cc
   ${PROJECT_SOURCE_DIR}/src/Mesh.h
+  ${PROJECT_SOURCE_DIR}/src/Model.cc
+  ${PROJECT_SOURCE_DIR}/src/Model.h
   ${PROJECT_SOURCE_DIR}/src/ShaderProgram.cc
   ${PROJECT_SOURCE_DIR}/src/ShaderProgram.h
   ${PROJECT_SOURCE_DIR}/src/TextureLoader.cc
@@ -39,4 +42,4 @@ target_include_directories(opengl_app PRIVATE
   ${boost_pfr_SOURCE_DIR}/include
   ${PROJECT_SOURCE_DIR}/third_party/stb
 )
-target_link_libraries(opengl_app PRIVATE glad glfw glm::glm OpenGL::GL)
+target_link_libraries(opengl_app PRIVATE assimp::assimp glad glfw glm::glm OpenGL::GL)

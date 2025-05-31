@@ -6,9 +6,10 @@ This project is a hands-on implementation following the [Learn OpenGL](https://l
 
 ## Dependencies
 
-+ C++17 compiler
-+ [CMake](https://cmake.org/) (>= 3.15)
-+ [GLFW](https://www.glfw.org/)
++ Compiler: C++17 compatible (GCC, Clang, MSVC)
++ [CMake](https://cmake.org/): >= 3.15 (for build configuration)
++ [GLFW](https://www.glfw.org/): Window/input management
++ [Assimp](https://www.assimp.org/): Model loading
 
 ## Building
 

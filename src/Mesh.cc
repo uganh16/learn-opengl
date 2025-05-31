@@ -1,5 +1,7 @@
 #include "Mesh.h"
 
+#include "ShaderProgram.h"
+
 Mesh::~Mesh(void) {
   if (VAO != 0) {
     glDeleteVertexArrays(1, &VAO);
@@ -12,7 +14,22 @@ Mesh::~Mesh(void) {
   }
 }
 
-void Mesh::draw(void) const {
+void Mesh::draw(const ShaderProgram& shaderProgram) const {
+  std::unordered_map<std::string, int> textureNrs;
+  for (size_t i = 0, n = textures.size(); i < n; ++i) {
+    /* Active proper texture unit before binding. */
+    glActiveTexture(GL_TEXTURE0 + i);
+
+    const Texture& texture = textures[i];
+    /* Retrieve texture number. */
+    int number = textureNrs[texture.type];
+    /* Now set the sampler to the correct texture unit. */
+    shaderProgram.uniform("material." + texture.type + std::to_string(number), static_cast<GLint>(i));
+    /* Finally, bind the texture. */
+    glBindTexture(GL_TEXTURE_2D, texture.id);
+  }
+
+  /* Draw mesh. */
   glBindVertexArray(VAO);
   if (EBO != 0) {
     glDrawElements(GL_TRIANGLES, count, GL_UNSIGNED_INT, (void*)0);
