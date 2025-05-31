@@ -253,8 +253,27 @@ int main(void) {
 
   Mesh cube = generateUnitCube();
 
+  glm::vec3 cubePositions[] = {
+    glm::vec3( 0.0f,  0.0f,   0.0f),
+    glm::vec3( 2.0f,  5.0f, -15.0f),
+    glm::vec3(-1.5f, -2.2f,  -2.5f),
+    glm::vec3(-3.8f, -2.0f, -12.3f),
+    glm::vec3( 2.4f, -0.4f,  -3.5f),
+    glm::vec3(-1.7f,  3.0f,  -7.5f),
+    glm::vec3( 1.3f, -2.0f,  -2.5f),
+    glm::vec3( 1.5f,  2.0f,  -2.5f),
+    glm::vec3( 1.5f,  0.2f,  -1.5f),
+    glm::vec3(-1.3f,  1.0f,  -1.5f),
+  };
+
   Mesh light = generateUnitSphere();
-  glm::vec3 lightPosition(1.2f, 1.0f, 2.0f);
+
+  glm::vec3 pointLightPositions[] = {
+    glm::vec3( 0.7f,  0.2f,   2.0f),
+    glm::vec3( 2.3f, -3.3f,  -4.0f),
+    glm::vec3(-4.0f,  2.0f, -12.0f),
+    glm::vec3( 0.0f,  0.0f,  -3.0f),
+  };
 
   GLuint diffuseMap = TextureLoader::load("assets/textures/container2.png");
   GLuint specularMap = TextureLoader::load("assets/textures/container2_specular.png");
@@ -279,11 +298,37 @@ int main(void) {
 
     cubeShader->use();
     cubeShader->uniform("viewPos", camera.getPosition());
-    /* Light properties */
-    cubeShader->uniform("light.position", lightPosition);
-    cubeShader->uniform("light.ambient", 0.2f, 0.2f, 0.2f);
-    cubeShader->uniform("light.diffuse", 0.5f, 0.5f, 0.5f);
-    cubeShader->uniform("light.specular", 1.0f, 1.0f, 1.0f);
+
+    /* Directional light */
+    cubeShader->uniform("directionalLight.direction", -0.2f, -1.0f, -0.3f);
+    cubeShader->uniform("directionalLight.ambient", 0.05f, 0.05f, 0.05f);
+    cubeShader->uniform("directionalLight.diffuse", 0.4f, 0.4f, 0.4f);
+    cubeShader->uniform("directionalLight.specular", 0.5f, 0.5f, 0.5f);
+
+    /* Point lights */
+    for (int i = 0, n = sizeof pointLightPositions / sizeof pointLightPositions[0]; i < n; ++i) {
+      std::string namePrefix = "pointLights[" + std::to_string(i) + "]";
+      cubeShader->uniform(namePrefix + ".position", pointLightPositions[i]);
+      cubeShader->uniform(namePrefix + ".constant", 1.0f);
+      cubeShader->uniform(namePrefix + ".linear", 0.09f);
+      cubeShader->uniform(namePrefix + ".quadratic", 0.032f);
+      cubeShader->uniform(namePrefix + ".ambient", 0.05f, 0.05f, 0.05f);
+      cubeShader->uniform(namePrefix + ".diffuse", 0.8f, 0.8f, 0.8f);
+      cubeShader->uniform(namePrefix + ".specular", 1.0f, 1.0f, 1.0f);
+    }
+
+    /* Spot light */
+    cubeShader->uniform("spotLight.position", camera.getPosition());
+    cubeShader->uniform("spotLight.direction", camera.getFront());
+    cubeShader->uniform("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+    cubeShader->uniform("spotLight.outerCutOff", glm::cos(glm::radians(17.5f)));
+    cubeShader->uniform("spotLight.constant", 1.0f);
+    cubeShader->uniform("spotLight.linear", 0.09f);
+    cubeShader->uniform("spotLight.quadratic", 0.032f);
+    cubeShader->uniform("spotLight.ambient", 0.0f, 0.0f, 0.0f);
+    cubeShader->uniform("spotLight.diffuse", 1.0f, 1.0f, 1.0f);
+    cubeShader->uniform("spotLight.specular", 1.0f, 1.0f, 1.0f);
+
     /* Material properties */
     cubeShader->uniform("material.diffuse", 0);
     glActiveTexture(GL_TEXTURE0);
@@ -292,24 +337,34 @@ int main(void) {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, specularMap);
     cubeShader->uniform("material.shininess", 32.0f);
-    /* Transformations */
-    glm::mat4 cubeModelMatrix = glm::mat4(1.0f);
-    glm::mat3 cubeNormalMatrix = glm::mat3(glm::transpose(glm::inverse(cubeModelMatrix)));
-    cubeShader->uniform("normalMatrix", cubeNormalMatrix);
-    cubeShader->uniform("modelMatrix", cubeModelMatrix);
-    cubeShader->uniform("viewMatrix", viewMatrix);
+
+    /* View/projection transformations */
     cubeShader->uniform("projectionMatrix", projectionMatrix);
-    /* Render the cube. */
-    cube.draw();
+    cubeShader->uniform("viewMatrix", viewMatrix);
+
+    /* Render the cubes. */
+    for (int i = 0, n = sizeof cubePositions / sizeof cubePositions[0]; i < n; ++i) {
+      float angle = 20.0f * i;
+      glm::mat4 cubeModelMatrix = glm::mat4(1.0f);
+      cubeModelMatrix = glm::translate(cubeModelMatrix, cubePositions[i]);
+      cubeModelMatrix = glm::rotate(cubeModelMatrix, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+      glm::mat3 cubeNormalMatrix = glm::mat3(glm::transpose(glm::inverse(cubeModelMatrix)));
+      cubeShader->uniform("normalMatrix", cubeNormalMatrix);
+      cubeShader->uniform("modelMatrix", cubeModelMatrix);
+
+      cube.draw();
+    }
 
     lightShader->use();
-    glm::mat4 lightModelMatrix = glm::mat4(1.0f);
-    lightModelMatrix = glm::translate(lightModelMatrix, lightPosition);
-    lightModelMatrix = glm::scale(lightModelMatrix, glm::vec3(0.1f));
-    lightShader->uniform("modelMatrix", lightModelMatrix);
-    lightShader->uniform("viewMatrix", viewMatrix);
-    lightShader->uniform("projectionMatrix", projectionMatrix);
-    light.draw();
+    for (int i = 0, n = sizeof pointLightPositions / sizeof pointLightPositions[0]; i < n; ++i) {
+      glm::mat4 lightModelMatrix = glm::mat4(1.0f);
+      lightModelMatrix = glm::translate(lightModelMatrix, pointLightPositions[i]);
+      lightModelMatrix = glm::scale(lightModelMatrix, glm::vec3(0.01f));
+      lightShader->uniform("modelMatrix", lightModelMatrix);
+      lightShader->uniform("viewMatrix", viewMatrix);
+      lightShader->uniform("projectionMatrix", projectionMatrix);
+      light.draw();
+    }
 
     glfwSwapBuffers(window);
     /* The `glfwPollEvents` function checks if any events are triggered,

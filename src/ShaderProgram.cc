@@ -106,6 +106,9 @@ GLint ShaderProgram::getUniformLocation(const std::string& name) const {
     return it->second;
   }
   GLint location = glGetUniformLocation(programID, name.c_str());
+  if (location == -1) {
+    std::cerr << "Uniform '" << name << "' not found in shader program (ID: " << programID << ")" << std::endl;
+  }
   uniformLocationCache[name] = location;
   return location;
 }
