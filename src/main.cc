@@ -139,22 +139,75 @@ int main(void) {
     return -1;
   }
 
-  glEnable(GL_DEPTH_TEST);
-
   printSystemInfo();
 
+  glEnable(GL_DEPTH_TEST);
+
   std::unique_ptr<ShaderProgram> shaderProgram = ShaderProgram::create(
-    "assets/shaders/shader.vs", "assets/shaders/shader.fs");
+    "assets/shaders/depthTestingShader.vs", "assets/shaders/depthTestingShader.fs");
   if (!shaderProgram) {
     glfwTerminate();
     return -1;
   }
 
-  std::unique_ptr<Model> model = Model::load("assets/objects/backpack/backpack.obj");
-  if (!model) {
-    glfwTerminate();
-    return -1;
-  }
+  struct Vertex {
+    glm::vec3 position;
+    glm::vec2 texCoord;
+  };
+
+  Mesh cube(std::vector<Vertex>{
+    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f} },
+    { {  0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f} },
+    { {  0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f} },
+    { {  0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f} },
+    { { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f} },
+    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f} },
+
+    { { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f} },
+    { {  0.5f, -0.5f,  0.5f }, { 1.0f, 0.0f} },
+    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 1.0f} },
+    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 1.0f} },
+    { { -0.5f,  0.5f,  0.5f }, { 0.0f, 1.0f} },
+    { { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f} },
+
+    { { -0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f} },
+    { { -0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f} },
+    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f} },
+    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f} },
+    { { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f} },
+    { { -0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f} },
+
+    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f} },
+    { {  0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f} },
+    { {  0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f} },
+    { {  0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f} },
+    { {  0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f} },
+    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f} },
+
+    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f} },
+    { {  0.5f, -0.5f, -0.5f }, { 1.0f, 1.0f} },
+    { {  0.5f, -0.5f,  0.5f }, { 1.0f, 0.0f} },
+    { {  0.5f, -0.5f,  0.5f }, { 1.0f, 0.0f} },
+    { { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f} },
+    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f} },
+
+    { { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f} },
+    { {  0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f} },
+    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f} },
+    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f} },
+    { { -0.5f,  0.5f,  0.5f }, { 0.0f, 0.0f} },
+    { { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f} },
+  });
+
+  Mesh floor(std::vector<Vertex>{
+    { {  5.0f, -0.5f,  5.0f }, { 2.0f, 0.0f } },
+    { { -5.0f, -0.5f,  5.0f }, { 0.0f, 0.0f } },
+    { { -5.0f, -0.5f, -5.0f }, { 0.0f, 2.0f } },
+
+    { {  5.0f, -0.5f,  5.0f }, { 2.0f, 0.0f } },
+    { { -5.0f, -0.5f, -5.0f }, { 0.0f, 2.0f } },
+    { {  5.0f, -0.5f, -5.0f }, { 2.0f, 2.0f } },
+  });
 
   while (!glfwWindowShouldClose(window)) {
     float currentFrame = static_cast<float>(glfwGetTime());
@@ -166,20 +219,26 @@ int main(void) {
     glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    shaderProgram->use();
+
     glm::mat4 projectionMatrix = camera.getProjectionMatrix(
       static_cast<float>(windowWidth) / windowHeight, 0.1f, 100.0f);
     glm::mat4 viewMatrix = camera.getViewMatrix();
-
-    glm::mat4 modelMatrix = glm::mat4(1.0f);
-    modelMatrix = glm::translate(modelMatrix, glm::vec3(0.0f, 0.0f, 0.0f));
-    modelMatrix = glm::scale(modelMatrix, glm::vec3(1.0f, 1.0f, 1.0f));
-
-    shaderProgram->use();
     shaderProgram->uniform("projectionMatrix", projectionMatrix);
     shaderProgram->uniform("viewMatrix", viewMatrix);
-    shaderProgram->uniform("modelMatrix", modelMatrix);
 
-    model->draw(*shaderProgram);
+    glm::mat4 cube1ModelMatrix = glm::mat4(1.0f);
+    cube1ModelMatrix = glm::translate(cube1ModelMatrix, glm::vec3(-1.0f, 0.0f, -1.0f));
+    shaderProgram->uniform("modelMatrix", cube1ModelMatrix);
+    cube.draw(*shaderProgram);
+
+    glm::mat4 cube2ModelMatrix = glm::mat4(1.0f);
+    cube2ModelMatrix = glm::translate(cube2ModelMatrix, glm::vec3(2.0f, 0.0f, 0.0f));
+    shaderProgram->uniform("modelMatrix", cube2ModelMatrix);
+    cube.draw(*shaderProgram);
+
+    shaderProgram->uniform("modelMatrix", glm::mat4(1.0f));
+    floor.draw(*shaderProgram);
 
     glfwSwapBuffers(window);
     /* The `glfwPollEvents` function checks if any events are triggered,
