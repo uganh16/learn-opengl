@@ -143,20 +143,63 @@ int main(void) {
 
   glEnable(GL_DEPTH_TEST);
 
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  /* Create a framebuffer object and bind it. */
+  GLuint fbo;
+  glGenFramebuffers(1, &fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
-  std::unique_ptr<ShaderProgram> shaderProgram = ShaderProgram::create(
-    "assets/shaders/blendingShader.vs", "assets/shaders/blendingShader.fs");
-  if (!shaderProgram) {
+  /* Create a texture image that we attach as a color attachment to the
+   * framebuffer. We set the texture's dimensions equal to the width and height
+   * of the window and keep its data uninitialized. */
+  GLuint texColorBufferID;
+  glGenTextures(1, &texColorBufferID);
+  glBindTexture(GL_TEXTURE_2D, texColorBufferID);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, windowWidth, windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  /* Attach it to currently bound framebuffer object. */
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBufferID, 0);
+
+  /* We also want to make sure OpenGL is able to do depth testing (and
+   * optionally stencil testing) so we have to make sure to add a depth (and
+   * stencil) attachment to the buffer. Since we'll only be sampling the color
+   * buffer and not the other buffers we can create a renderbuffer object for
+   * this purpose. */
+  GLuint rbo;
+  glGenRenderbuffers(1, &rbo);
+  glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, windowWidth, windowHeight);
+  glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+  /* Attach the renderbuffer object to the depth and stencil attachment of the
+   * framebuffer. */
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    std::cerr << " Framebuffer is not complete!" << std::endl;
     glfwTerminate();
     return -1;
   }
 
-  GLuint cubeTextureID = TextureLoader::load("assets/textures/marble.jpg");
+  /* Make the default framebuffer active by binding to 0. */
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+  std::unique_ptr<ShaderProgram> shaderProgram = ShaderProgram::create(
+    "assets/shaders/defaultShader.vs", "assets/shaders/defaultShader.fs");
+  std::unique_ptr<ShaderProgram> screenShaderProgram = ShaderProgram::create(
+    "assets/shaders/screenShader.vs", "assets/shaders/screenShader.fs");
+  if (!shaderProgram || !screenShaderProgram) {
+    glfwTerminate();
+    return -1;
+  }
+
+  GLuint cubeTextureID = TextureLoader::load("assets/textures/container.jpg");
   GLuint floorTextureID = TextureLoader::load("assets/textures/metal.png");
-  GLuint windowTextureID = TextureLoader::load("assets/textures/blending_transparent_window.png");
-  if (cubeTextureID == 0 || floorTextureID == 0 || windowTextureID == 0) {
+  if (cubeTextureID == 0 || floorTextureID == 0) {
     glfwTerminate();
     return -1;
   }
@@ -224,24 +267,44 @@ int main(void) {
     { floorTextureID, "texture0" }
   });
 
-  Mesh transparentWindow(std::vector<Vertex>{
-    { { 0.0f,  0.5f,  0.0f }, { 0.0f,  1.0f } },
-    { { 0.0f, -0.5f,  0.0f }, { 0.0f,  0.0f } },
-    { { 1.0f, -0.5f,  0.0f }, { 1.0f,  0.0f } },
+  struct ScreenVertex {
+    glm::vec2 position;
+    glm::vec2 texCoord;
+  };
 
-    { { 0.0f,  0.5f,  0.0f }, { 0.0f,  1.0f } },
-    { { 1.0f, -0.5f,  0.0f }, { 1.0f,  0.0f } },
-    { { 1.0f,  0.5f,  0.0f }, { 1.0f,  1.0f } },
+  Mesh quad(std::vector<ScreenVertex>{
+    { { -1.0f,  1.0f }, { 0.0f,  1.0f } },
+    { { -1.0f, -1.0f }, { 0.0f,  0.0f } },
+    { {  1.0f, -1.0f }, { 1.0f,  0.0f } },
+
+    { { -1.0f,  1.0f }, { 0.0f,  1.0f } },
+    { {  1.0f, -1.0f }, { 1.0f,  0.0f } },
+    { {  1.0f,  1.0f }, { 1.0f,  1.0f } },
   }, {
-    { windowTextureID, "texture0" }
+    { texColorBufferID, "screenTexture" }
   });
 
-  std::vector<glm::vec3> windowPositions = {
-    glm::vec3(-1.5f, 0.0f, -0.48f),
-    glm::vec3( 1.5f, 0.0f,  0.51f),
-    glm::vec3( 0.0f, 0.0f,   0.7f),
-    glm::vec3(-0.3f, 0.0f,  -2.3f),
-    glm::vec3 (0.5f, 0.0f,  -0.6f),
+  std::vector<glm::mat3> postProcessingTransform = {
+    glm::mat3(
+       0.5f,  0.0f, 0.0f,
+       0.0f,  0.5f, 0.0f,
+      -0.5f,  0.5f, 1.0f
+    ),
+    glm::mat3(
+      0.5f,  0.0f, 0.0f,
+      0.0f,  0.5f, 0.0f,
+      0.5f,  0.5f, 1.0f
+    ),
+    glm::mat3(
+      0.5f,  0.0f, 0.0f,
+      0.0f,  0.5f, 0.0f,
+     -0.5f, -0.5f, 1.0f
+    ),
+    glm::mat3(
+      0.5f,  0.0f, 0.0f,
+      0.0f,  0.5f, 0.0f,
+      0.5f, -0.5f, 1.0f
+    ),
   };
 
   while (!glfwWindowShouldClose(window)) {
@@ -250,6 +313,9 @@ int main(void) {
     lastFrame = currentFrame;
 
     processInput(window);
+
+    /* Bind to framebuffer and draw scene as we normally would to color texture. */
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -275,18 +341,24 @@ int main(void) {
     shaderProgram->uniform("modelMatrix", glm::mat4(1.0f));
     floor.draw(*shaderProgram);
 
-    std::vector<std::pair<float, std::vector<glm::vec3>::iterator>> sortedWindows;
-    for (auto it = windowPositions.begin(); it != windowPositions.end(); ++it) {
-      sortedWindows.push_back({ glm::distance(camera.getPosition(), *it), it });
-    }
-    std::sort(sortedWindows.begin(), sortedWindows.end());
+    /* Now bind back to the default framebuffer and draw a quad plane with the
+     * attached framebuffer color texture. */
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    for (auto it = sortedWindows.rbegin(); it != sortedWindows.rend(); ++it) {
-      glm::mat4 windowModelMatrix = glm::mat4(1.0f);
-      windowModelMatrix = glm::translate(windowModelMatrix, *it->second);
-      shaderProgram->uniform("modelMatrix", windowModelMatrix);
-      transparentWindow.draw(*shaderProgram);
+    glDisable(GL_DEPTH_TEST);
+
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    screenShaderProgram->use();
+
+    for (int i = 0; i < 4; ++i) {
+      screenShaderProgram->uniform("transform", postProcessingTransform[i]);
+      screenShaderProgram->uniform("postProcessingType", (GLint)i);
+      quad.draw(*screenShaderProgram);
     }
+
+    glEnable(GL_DEPTH_TEST);
 
     glfwSwapBuffers(window);
     /* The `glfwPollEvents` function checks if any events are triggered,
@@ -294,6 +366,10 @@ int main(void) {
     * we can register via callback methods). */
     glfwPollEvents();
   }
+
+  glDeleteRenderbuffers(1, &rbo);
+  glDeleteTextures(1, &texColorBufferID);
+  glDeleteFramebuffers(1, &fbo);
 
   glfwTerminate();
 
