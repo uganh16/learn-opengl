@@ -143,9 +143,19 @@ int main(void) {
 
   glEnable(GL_DEPTH_TEST);
 
+  glEnable(GL_STENCIL_TEST);
+  glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
   std::unique_ptr<ShaderProgram> shaderProgram = ShaderProgram::create(
-    "assets/shaders/depthTestingShader.vs", "assets/shaders/depthTestingShader.fs");
+    "assets/shaders/stencilTestingShader.vs", "assets/shaders/stencilTestingShader.fs");
   if (!shaderProgram) {
+    glfwTerminate();
+    return -1;
+  }
+
+  GLuint cubeTextureID = TextureLoader::load("assets/textures/marble.jpg");
+  GLuint floorTextureID = TextureLoader::load("assets/textures/metal.png");
+  if (cubeTextureID == 0 || floorTextureID == 0) {
     glfwTerminate();
     return -1;
   }
@@ -197,6 +207,8 @@ int main(void) {
     { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f} },
     { { -0.5f,  0.5f,  0.5f }, { 0.0f, 0.0f} },
     { { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f} },
+  }, {
+    { cubeTextureID, "diffuse" }
   });
 
   Mesh floor(std::vector<Vertex>{
@@ -207,6 +219,8 @@ int main(void) {
     { {  5.0f, -0.5f,  5.0f }, { 2.0f, 0.0f } },
     { { -5.0f, -0.5f, -5.0f }, { 0.0f, 2.0f } },
     { {  5.0f, -0.5f, -5.0f }, { 2.0f, 2.0f } },
+  }, {
+    { floorTextureID, "diffuse" }
   });
 
   while (!glfwWindowShouldClose(window)) {
@@ -216,8 +230,8 @@ int main(void) {
 
     processInput(window);
 
-    glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     shaderProgram->use();
 
@@ -227,18 +241,65 @@ int main(void) {
     shaderProgram->uniform("projectionMatrix", projectionMatrix);
     shaderProgram->uniform("viewMatrix", viewMatrix);
 
-    glm::mat4 cube1ModelMatrix = glm::mat4(1.0f);
-    cube1ModelMatrix = glm::translate(cube1ModelMatrix, glm::vec3(-1.0f, 0.0f, -1.0f));
-    shaderProgram->uniform("modelMatrix", cube1ModelMatrix);
-    cube.draw(*shaderProgram);
+    {
+      /* Draw floor as normal, but don't write to the stencil buffer. */
+      glStencilMask(0x00);
 
-    glm::mat4 cube2ModelMatrix = glm::mat4(1.0f);
-    cube2ModelMatrix = glm::translate(cube2ModelMatrix, glm::vec3(2.0f, 0.0f, 0.0f));
-    shaderProgram->uniform("modelMatrix", cube2ModelMatrix);
-    cube.draw(*shaderProgram);
+      shaderProgram->uniform("outline", 0.0f);
+      shaderProgram->uniform("modelMatrix", glm::mat4(1.0f));
+      floor.draw(*shaderProgram);
+    }
 
-    shaderProgram->uniform("modelMatrix", glm::mat4(1.0f));
-    floor.draw(*shaderProgram);
+    {
+      /* 1st. render pass: draw objects as normal, writing to the stencil
+       * buffer. */
+      glStencilFunc(GL_ALWAYS, 1, 0xFF);
+      glStencilMask(0xFF);
+
+      shaderProgram->uniform("outline", 0.0f);
+
+      glm::mat4 cube1ModelMatrix = glm::mat4(1.0f);
+      cube1ModelMatrix = glm::translate(cube1ModelMatrix, glm::vec3(-1.0f, 0.0f, -1.0f));
+      shaderProgram->uniform("modelMatrix", cube1ModelMatrix);
+      cube.draw(*shaderProgram);
+
+      glm::mat4 cube2ModelMatrix = glm::mat4(1.0f);
+      cube2ModelMatrix = glm::translate(cube2ModelMatrix, glm::vec3(2.0f, 0.0f, 0.0f));
+      shaderProgram->uniform("modelMatrix", cube2ModelMatrix);
+      cube.draw(*shaderProgram);
+    }
+
+    {
+      /* 2nd. render pass: now draw slightly scaled versions of the objects,
+       * this time disabling stencil writing. Because the stencil buffer is now
+       * filled with several 1s, the parts of the buffer that are 1 are not
+       * drawn, thus only drawing the objects size differences, making it look
+       * like outlines. */
+      glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+      glStencilMask(0x00);
+
+      glDisable(GL_DEPTH_TEST);
+
+      shaderProgram->uniform("outline", 1.0f);
+      shaderProgram->uniform("outlineColor", 0.04f, 0.28f, 0.26f);
+
+      glm::mat4 cube1ModelMatrix = glm::mat4(1.0f);
+      cube1ModelMatrix = glm::translate(cube1ModelMatrix, glm::vec3(-1.0f, 0.0f, -1.0f));
+      cube1ModelMatrix = glm::scale(cube1ModelMatrix, glm::vec3(1.1f, 1.1f, 1.1f));
+      shaderProgram->uniform("modelMatrix", cube1ModelMatrix);
+      cube.draw(*shaderProgram);
+
+      glm::mat4 cube2ModelMatrix = glm::mat4(1.0f);
+      cube2ModelMatrix = glm::translate(cube2ModelMatrix, glm::vec3(2.0f, 0.0f, 0.0f));
+      cube2ModelMatrix = glm::scale(cube2ModelMatrix, glm::vec3(1.1f, 1.1f, 1.1f));
+      shaderProgram->uniform("modelMatrix", cube2ModelMatrix);
+      cube.draw(*shaderProgram);
+
+      glEnable(GL_DEPTH_TEST);
+    }
+
+    glStencilFunc(GL_ALWAYS, 0, 0xFF);
+    glStencilMask(0xFF);
 
     glfwSwapBuffers(window);
     /* The `glfwPollEvents` function checks if any events are triggered,
