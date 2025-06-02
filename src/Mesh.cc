@@ -15,16 +15,13 @@ Mesh::~Mesh(void) {
 }
 
 void Mesh::draw(const ShaderProgram& shaderProgram) const {
-  std::unordered_map<std::string, int> textureNrs;
   for (size_t i = 0, n = textures.size(); i < n; ++i) {
     /* Active proper texture unit before binding. */
     glActiveTexture(GL_TEXTURE0 + i);
 
     const Texture& texture = textures[i];
-    /* Retrieve texture number. */
-    int number = textureNrs[texture.type];
-    /* Now set the sampler to the correct texture unit. */
-    shaderProgram.uniform("material." + texture.type + std::to_string(number), static_cast<GLint>(i));
+    /* Then, set the sampler to the correct texture unit. */
+    shaderProgram.uniform(texture.name, static_cast<GLint>(i));
     /* Finally, bind the texture. */
     glBindTexture(GL_TEXTURE_2D, texture.id);
   }

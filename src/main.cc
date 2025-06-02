@@ -209,7 +209,7 @@ int main(void) {
     { { -0.5f,  0.5f,  0.5f }, { 0.0f, 0.0f} },
     { { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f} },
   }, {
-    { cubeTextureID, "diffuse" }
+    { cubeTextureID, "texture0" }
   });
 
   Mesh floor(std::vector<Vertex>{
@@ -221,7 +221,7 @@ int main(void) {
     { { -5.0f, -0.5f, -5.0f }, { 0.0f, 2.0f } },
     { {  5.0f, -0.5f, -5.0f }, { 2.0f, 2.0f } },
   }, {
-    { floorTextureID, "diffuse" }
+    { floorTextureID, "texture0" }
   });
 
   Mesh transparentWindow(std::vector<Vertex>{
@@ -233,7 +233,7 @@ int main(void) {
     { { 1.0f, -0.5f,  0.0f }, { 1.0f,  0.0f } },
     { { 1.0f,  0.5f,  0.0f }, { 1.0f,  1.0f } },
   }, {
-    { windowTextureID, "diffuse" }
+    { windowTextureID, "texture0" }
   });
 
   std::vector<glm::vec3> windowPositions = {

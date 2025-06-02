@@ -4,12 +4,8 @@ out vec4 FragColor;
 
 in vec2 fragTexCoord;
 
-struct Material {
-  sampler2D diffuse0;
-};
-
-uniform Material material;
+uniform sampler2D texture0;
 
 void main() {
-  FragColor = texture(material.diffuse0, fragTexCoord);
+  FragColor = texture(texture0, fragTexCoord);
 }

@@ -11,7 +11,7 @@ class ShaderProgram;
 
 struct Texture {
   GLuint id;
-  std::string type;
+  std::string name;
   std::string path;
 };
 

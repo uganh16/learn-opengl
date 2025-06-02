@@ -99,6 +99,7 @@ void Model::processMesh(const aiMesh* mesh, const aiScene* scene) {
 
   /* Process materials. */
   const aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+  std::unordered_map<std::string, int> textureNrs;
   for (const auto& pair : supportedTextureTypes) {
     for (unsigned int i = 0, n = material->GetTextureCount(pair.first); i < n; ++i) {
       aiString str;
@@ -106,7 +107,9 @@ void Model::processMesh(const aiMesh* mesh, const aiScene* scene) {
       std::string path = directory + "/" + str.C_Str();
       GLuint textureID = TextureLoader::load(path);
       if (textureID != 0) {
-        textures.push_back({ textureID, pair.second, path });
+        /* Retrieve texture number. */
+        int number = textureNrs[pair.second]++;
+        textures.push_back({ textureID, "material." + pair.second + std::to_string(number), path });
       }
     }
   }
