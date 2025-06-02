@@ -143,8 +143,11 @@ int main(void) {
 
   glEnable(GL_DEPTH_TEST);
 
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
   std::unique_ptr<ShaderProgram> shaderProgram = ShaderProgram::create(
-    "assets/shaders/grassShader.vs", "assets/shaders/grassShader.fs");
+    "assets/shaders/blendingShader.vs", "assets/shaders/blendingShader.fs");
   if (!shaderProgram) {
     glfwTerminate();
     return -1;
@@ -152,8 +155,8 @@ int main(void) {
 
   GLuint cubeTextureID = TextureLoader::load("assets/textures/marble.jpg");
   GLuint floorTextureID = TextureLoader::load("assets/textures/metal.png");
-  GLuint grassTextureID = TextureLoader::load("assets/textures/grass.png");
-  if (cubeTextureID == 0 || floorTextureID == 0 || grassTextureID == 0) {
+  GLuint windowTextureID = TextureLoader::load("assets/textures/blending_transparent_window.png");
+  if (cubeTextureID == 0 || floorTextureID == 0 || windowTextureID == 0) {
     glfwTerminate();
     return -1;
   }
@@ -221,7 +224,7 @@ int main(void) {
     { floorTextureID, "diffuse" }
   });
 
-  Mesh grass(std::vector<Vertex>{
+  Mesh transparentWindow(std::vector<Vertex>{
     { { 0.0f,  0.5f,  0.0f }, { 0.0f,  1.0f } },
     { { 0.0f, -0.5f,  0.0f }, { 0.0f,  0.0f } },
     { { 1.0f, -0.5f,  0.0f }, { 1.0f,  0.0f } },
@@ -230,10 +233,10 @@ int main(void) {
     { { 1.0f, -0.5f,  0.0f }, { 1.0f,  0.0f } },
     { { 1.0f,  0.5f,  0.0f }, { 1.0f,  1.0f } },
   }, {
-    { grassTextureID, "diffuse" }
+    { windowTextureID, "diffuse" }
   });
 
-  std::vector<glm::vec3> grassPositions = {
+  std::vector<glm::vec3> windowPositions = {
     glm::vec3(-1.5f, 0.0f, -0.48f),
     glm::vec3( 1.5f, 0.0f,  0.51f),
     glm::vec3( 0.0f, 0.0f,   0.7f),
@@ -272,11 +275,17 @@ int main(void) {
     shaderProgram->uniform("modelMatrix", glm::mat4(1.0f));
     floor.draw(*shaderProgram);
 
-    for (const auto& grassPosition : grassPositions) {
-      glm::mat4 grassModelMatrix = glm::mat4(1.0f);
-      grassModelMatrix = glm::translate(grassModelMatrix, grassPosition);
-      shaderProgram->uniform("modelMatrix", grassModelMatrix);
-      grass.draw(*shaderProgram);
+    std::vector<std::pair<float, std::vector<glm::vec3>::iterator>> sortedWindows;
+    for (auto it = windowPositions.begin(); it != windowPositions.end(); ++it) {
+      sortedWindows.push_back({ glm::distance(camera.getPosition(), *it), it });
+    }
+    std::sort(sortedWindows.begin(), sortedWindows.end());
+
+    for (auto it = sortedWindows.rbegin(); it != sortedWindows.rend(); ++it) {
+      glm::mat4 windowModelMatrix = glm::mat4(1.0f);
+      windowModelMatrix = glm::translate(windowModelMatrix, *it->second);
+      shaderProgram->uniform("modelMatrix", windowModelMatrix);
+      transparentWindow.draw(*shaderProgram);
     }
 
     glfwSwapBuffers(window);
