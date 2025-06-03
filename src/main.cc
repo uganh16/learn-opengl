@@ -7,6 +7,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <stb_image.h>
 
 #include "Camera.h"
 #include "Mesh.h"
@@ -96,6 +97,45 @@ void processInput(GLFWwindow* window) {
   }
 }
 
+GLuint loadCubemap(const std::string& directory) {
+  const static std::vector<std::pair<GLenum, std::string>> faces = {
+    { GL_TEXTURE_CUBE_MAP_POSITIVE_X,  "right.jpg" },
+    { GL_TEXTURE_CUBE_MAP_NEGATIVE_X,   "left.jpg" },
+    { GL_TEXTURE_CUBE_MAP_POSITIVE_Y,    "top.jpg" },
+    { GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, "bottom.jpg" },
+    { GL_TEXTURE_CUBE_MAP_POSITIVE_Z,  "front.jpg" },
+    { GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,   "back.jpg" },
+  };
+
+  GLuint textureID;
+  glGenTextures(1, &textureID);
+
+  glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+  stbi_set_flip_vertically_on_load(false);
+
+  int width, height, nrChannels;
+  stbi_uc* image;
+  for (const auto& pair : faces) {
+    std::string path = directory + "/" + pair.second;
+    image = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
+    if (image != NULL) {
+      glTexImage2D(pair.first, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+      stbi_image_free(image);
+    } else {
+      std::cerr << "Cubemap texture failed to load at path: " << path << std::endl;
+    }
+  }
+
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+  return textureID;
+}
+
 int main(void) {
   if (!glfwInit()) {
     std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -143,66 +183,72 @@ int main(void) {
 
   glEnable(GL_DEPTH_TEST);
 
-  /* Create a framebuffer object and bind it. */
-  GLuint fbo;
-  glGenFramebuffers(1, &fbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-  /* Create a texture image that we attach as a color attachment to the
-   * framebuffer. We set the texture's dimensions equal to the width and height
-   * of the window and keep its data uninitialized. */
-  GLuint texColorBufferID;
-  glGenTextures(1, &texColorBufferID);
-  glBindTexture(GL_TEXTURE_2D, texColorBufferID);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, windowWidth, windowHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-  /* Attach it to currently bound framebuffer object. */
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBufferID, 0);
-
-  /* We also want to make sure OpenGL is able to do depth testing (and
-   * optionally stencil testing) so we have to make sure to add a depth (and
-   * stencil) attachment to the buffer. Since we'll only be sampling the color
-   * buffer and not the other buffers we can create a renderbuffer object for
-   * this purpose. */
-  GLuint rbo;
-  glGenRenderbuffers(1, &rbo);
-  glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, windowWidth, windowHeight);
-  glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-  /* Attach the renderbuffer object to the depth and stencil attachment of the
-   * framebuffer. */
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
-
-  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-    std::cerr << " Framebuffer is not complete!" << std::endl;
-    glfwTerminate();
-    return -1;
-  }
-
-  /* Make the default framebuffer active by binding to 0. */
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
   std::unique_ptr<ShaderProgram> shaderProgram = ShaderProgram::create(
     "assets/shaders/defaultShader.vs", "assets/shaders/defaultShader.fs");
-  std::unique_ptr<ShaderProgram> screenShaderProgram = ShaderProgram::create(
-    "assets/shaders/screenShader.vs", "assets/shaders/screenShader.fs");
-  if (!shaderProgram || !screenShaderProgram) {
+  std::unique_ptr<ShaderProgram> skyboxShaderProgram = ShaderProgram::create(
+    "assets/shaders/skyboxShader.vs", "assets/shaders/skyboxShader.fs");
+  if (!shaderProgram || !skyboxShaderProgram) {
     glfwTerminate();
     return -1;
   }
 
   GLuint cubeTextureID = TextureLoader::load("assets/textures/container.jpg");
-  GLuint floorTextureID = TextureLoader::load("assets/textures/metal.png");
-  if (cubeTextureID == 0 || floorTextureID == 0) {
+  if (cubeTextureID == 0) {
     glfwTerminate();
     return -1;
   }
+
+  GLuint cubemapTextureID = loadCubemap("assets/textures/skybox");
+
+  struct SkyboxVertex {
+    glm::vec3 position;
+  };
+
+  Mesh skybox(std::vector<SkyboxVertex>{
+    { { -1.0f,  1.0f, -1.0f } },
+    { { -1.0f, -1.0f, -1.0f } },
+    { {  1.0f, -1.0f, -1.0f } },
+    { {  1.0f, -1.0f, -1.0f } },
+    { {  1.0f,  1.0f, -1.0f } },
+    { { -1.0f,  1.0f, -1.0f } },
+
+    { { -1.0f, -1.0f,  1.0f } },
+    { { -1.0f, -1.0f, -1.0f } },
+    { { -1.0f,  1.0f, -1.0f } },
+    { { -1.0f,  1.0f, -1.0f } },
+    { { -1.0f,  1.0f,  1.0f } },
+    { { -1.0f, -1.0f,  1.0f } },
+
+    { {  1.0f, -1.0f, -1.0f } },
+    { {  1.0f, -1.0f,  1.0f } },
+    { {  1.0f,  1.0f,  1.0f } },
+    { {  1.0f,  1.0f,  1.0f } },
+    { {  1.0f,  1.0f, -1.0f } },
+    { {  1.0f, -1.0f, -1.0f } },
+
+    { { -1.0f, -1.0f,  1.0f } },
+    { { -1.0f,  1.0f,  1.0f } },
+    { {  1.0f,  1.0f,  1.0f } },
+    { {  1.0f,  1.0f,  1.0f } },
+    { {  1.0f, -1.0f,  1.0f } },
+    { { -1.0f, -1.0f,  1.0f } },
+
+    { { -1.0f,  1.0f, -1.0f } },
+    { {  1.0f,  1.0f, -1.0f } },
+    { {  1.0f,  1.0f,  1.0f } },
+    { {  1.0f,  1.0f,  1.0f } },
+    { { -1.0f,  1.0f,  1.0f } },
+    { { -1.0f,  1.0f, -1.0f } },
+
+    { { -1.0f, -1.0f, -1.0f } },
+    { { -1.0f, -1.0f,  1.0f } },
+    { {  1.0f, -1.0f, -1.0f } },
+    { {  1.0f, -1.0f, -1.0f } },
+    { { -1.0f, -1.0f,  1.0f } },
+    { {  1.0f, -1.0f,  1.0f } },
+  }, {
+    { cubemapTextureID, "skybox" }
+  });
 
   struct Vertex {
     glm::vec3 position;
@@ -255,58 +301,6 @@ int main(void) {
     { cubeTextureID, "texture0" }
   });
 
-  Mesh floor(std::vector<Vertex>{
-    { {  5.0f, -0.5f,  5.0f }, { 2.0f, 0.0f } },
-    { { -5.0f, -0.5f,  5.0f }, { 0.0f, 0.0f } },
-    { { -5.0f, -0.5f, -5.0f }, { 0.0f, 2.0f } },
-
-    { {  5.0f, -0.5f,  5.0f }, { 2.0f, 0.0f } },
-    { { -5.0f, -0.5f, -5.0f }, { 0.0f, 2.0f } },
-    { {  5.0f, -0.5f, -5.0f }, { 2.0f, 2.0f } },
-  }, {
-    { floorTextureID, "texture0" }
-  });
-
-  struct ScreenVertex {
-    glm::vec2 position;
-    glm::vec2 texCoord;
-  };
-
-  Mesh quad(std::vector<ScreenVertex>{
-    { { -1.0f,  1.0f }, { 0.0f,  1.0f } },
-    { { -1.0f, -1.0f }, { 0.0f,  0.0f } },
-    { {  1.0f, -1.0f }, { 1.0f,  0.0f } },
-
-    { { -1.0f,  1.0f }, { 0.0f,  1.0f } },
-    { {  1.0f, -1.0f }, { 1.0f,  0.0f } },
-    { {  1.0f,  1.0f }, { 1.0f,  1.0f } },
-  }, {
-    { texColorBufferID, "screenTexture" }
-  });
-
-  std::vector<glm::mat3> postProcessingTransform = {
-    glm::mat3(
-       0.5f,  0.0f, 0.0f,
-       0.0f,  0.5f, 0.0f,
-      -0.5f,  0.5f, 1.0f
-    ),
-    glm::mat3(
-      0.5f,  0.0f, 0.0f,
-      0.0f,  0.5f, 0.0f,
-      0.5f,  0.5f, 1.0f
-    ),
-    glm::mat3(
-      0.5f,  0.0f, 0.0f,
-      0.0f,  0.5f, 0.0f,
-     -0.5f, -0.5f, 1.0f
-    ),
-    glm::mat3(
-      0.5f,  0.0f, 0.0f,
-      0.0f,  0.5f, 0.0f,
-      0.5f, -0.5f, 1.0f
-    ),
-  };
-
   while (!glfwWindowShouldClose(window)) {
     float currentFrame = static_cast<float>(glfwGetTime());
     deltaTime = currentFrame - lastFrame;
@@ -314,51 +308,35 @@ int main(void) {
 
     processInput(window);
 
-    /* Bind to framebuffer and draw scene as we normally would to color texture. */
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    shaderProgram->use();
 
     glm::mat4 projectionMatrix = camera.getProjectionMatrix(
       static_cast<float>(windowWidth) / windowHeight, 0.1f, 100.0f);
     glm::mat4 viewMatrix = camera.getViewMatrix();
+
+    shaderProgram->use();
     shaderProgram->uniform("projectionMatrix", projectionMatrix);
     shaderProgram->uniform("viewMatrix", viewMatrix);
-
-    glm::mat4 cube1ModelMatrix = glm::mat4(1.0f);
-    cube1ModelMatrix = glm::translate(cube1ModelMatrix, glm::vec3(-1.0f, 0.0f, -1.0f));
-    shaderProgram->uniform("modelMatrix", cube1ModelMatrix);
-    cube.draw(*shaderProgram);
-
-    glm::mat4 cube2ModelMatrix = glm::mat4(1.0f);
-    cube2ModelMatrix = glm::translate(cube2ModelMatrix, glm::vec3(2.0f, 0.0f, 0.0f));
-    shaderProgram->uniform("modelMatrix", cube2ModelMatrix);
-    cube.draw(*shaderProgram);
-
     shaderProgram->uniform("modelMatrix", glm::mat4(1.0f));
-    floor.draw(*shaderProgram);
+    cube.draw(*shaderProgram);
 
-    /* Now bind back to the default framebuffer and draw a quad plane with the
-     * attached framebuffer color texture. */
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    glDisable(GL_DEPTH_TEST);
-
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    screenShaderProgram->use();
-
-    for (int i = 0; i < 4; ++i) {
-      screenShaderProgram->uniform("transform", postProcessingTransform[i]);
-      screenShaderProgram->uniform("postProcessingType", (GLint)i);
-      quad.draw(*screenShaderProgram);
-    }
-
-    glEnable(GL_DEPTH_TEST);
+    /* So to give us a slight performance boost we're going to render the skybox
+     * last. This way, the depth buffer is completely filled with all the
+     * scene's depth values so we only have to render the skybox's fragments
+     * wherever the early depth test passes, greatly reducing the number of
+     * fragment shader calls. */
+    skyboxShaderProgram->use();
+    skyboxShaderProgram->uniform("projectionMatrix", projectionMatrix);
+    skyboxShaderProgram->uniform("viewMatrix", viewMatrix);
+    /* We do have to change the depth function a little by setting it to
+     * `GL_LEQUAL` instead of the default `GL_LESS`. The depth buffer will be
+     * filled with values of 1.0 for the skybox, so we need to make sure the
+     * skybox passes the depth tests with values *less than or equal* to the
+     * depth buffer instead of *less than*. */
+    glDepthFunc(GL_LEQUAL);
+    skybox.draw(*skyboxShaderProgram);
+    glDepthFunc(GL_LESS);
 
     glfwSwapBuffers(window);
     /* The `glfwPollEvents` function checks if any events are triggered,
@@ -367,9 +345,7 @@ int main(void) {
     glfwPollEvents();
   }
 
-  glDeleteRenderbuffers(1, &rbo);
-  glDeleteTextures(1, &texColorBufferID);
-  glDeleteFramebuffers(1, &fbo);
+  glDeleteTextures(1, &cubemapTextureID);
 
   glfwTerminate();
 
