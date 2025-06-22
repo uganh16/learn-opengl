@@ -184,16 +184,10 @@ int main(void) {
   glEnable(GL_DEPTH_TEST);
 
   std::unique_ptr<ShaderProgram> shaderProgram = ShaderProgram::create(
-    "assets/shaders/defaultShader.vs", "assets/shaders/defaultShader.fs");
+    "assets/shaders/environmentMappingShader.vs", "assets/shaders/environmentMappingShader.fs");
   std::unique_ptr<ShaderProgram> skyboxShaderProgram = ShaderProgram::create(
     "assets/shaders/skyboxShader.vs", "assets/shaders/skyboxShader.fs");
   if (!shaderProgram || !skyboxShaderProgram) {
-    glfwTerminate();
-    return -1;
-  }
-
-  GLuint cubeTextureID = TextureLoader::load("assets/textures/container.jpg");
-  if (cubeTextureID == 0) {
     glfwTerminate();
     return -1;
   }
@@ -252,53 +246,53 @@ int main(void) {
 
   struct Vertex {
     glm::vec3 position;
-    glm::vec2 texCoord;
+    glm::vec3 normal;
   };
 
   Mesh cube(std::vector<Vertex>{
-    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f} },
-    { {  0.5f, -0.5f, -0.5f }, { 1.0f, 0.0f} },
-    { {  0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f} },
-    { {  0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f} },
-    { { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f} },
-    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 0.0f} },
+    { { -0.5f, -0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
+    { {  0.5f, -0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
+    { {  0.5f,  0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
+    { {  0.5f,  0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
+    { { -0.5f,  0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
+    { { -0.5f, -0.5f, -0.5f }, {  0.0f,  0.0f, -1.0f } },
 
-    { { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f} },
-    { {  0.5f, -0.5f,  0.5f }, { 1.0f, 0.0f} },
-    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 1.0f} },
-    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 1.0f} },
-    { { -0.5f,  0.5f,  0.5f }, { 0.0f, 1.0f} },
-    { { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f} },
+    { { -0.5f, -0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
+    { {  0.5f, -0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
+    { {  0.5f,  0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
+    { {  0.5f,  0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
+    { { -0.5f,  0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
+    { { -0.5f, -0.5f,  0.5f }, {  0.0f,  0.0f,  1.0f } },
 
-    { { -0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f} },
-    { { -0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f} },
-    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f} },
-    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f} },
-    { { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f} },
-    { { -0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f} },
+    { { -0.5f,  0.5f,  0.5f }, { -1.0f,  0.0f,  0.0f } },
+    { { -0.5f,  0.5f, -0.5f }, { -1.0f,  0.0f,  0.0f } },
+    { { -0.5f, -0.5f, -0.5f }, { -1.0f,  0.0f,  0.0f } },
+    { { -0.5f, -0.5f, -0.5f }, { -1.0f,  0.0f,  0.0f } },
+    { { -0.5f, -0.5f,  0.5f }, { -1.0f,  0.0f,  0.0f } },
+    { { -0.5f,  0.5f,  0.5f }, { -1.0f,  0.0f,  0.0f } },
 
-    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f} },
-    { {  0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f} },
-    { {  0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f} },
-    { {  0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f} },
-    { {  0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f} },
-    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f} },
+    { {  0.5f,  0.5f,  0.5f }, {  1.0f,  0.0f,  0.0f } },
+    { {  0.5f,  0.5f, -0.5f }, {  1.0f,  0.0f,  0.0f } },
+    { {  0.5f, -0.5f, -0.5f }, {  1.0f,  0.0f,  0.0f } },
+    { {  0.5f, -0.5f, -0.5f }, {  1.0f,  0.0f,  0.0f } },
+    { {  0.5f, -0.5f,  0.5f }, {  1.0f,  0.0f,  0.0f } },
+    { {  0.5f,  0.5f,  0.5f }, {  1.0f,  0.0f,  0.0f } },
 
-    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f} },
-    { {  0.5f, -0.5f, -0.5f }, { 1.0f, 1.0f} },
-    { {  0.5f, -0.5f,  0.5f }, { 1.0f, 0.0f} },
-    { {  0.5f, -0.5f,  0.5f }, { 1.0f, 0.0f} },
-    { { -0.5f, -0.5f,  0.5f }, { 0.0f, 0.0f} },
-    { { -0.5f, -0.5f, -0.5f }, { 0.0f, 1.0f} },
+    { { -0.5f, -0.5f, -0.5f }, {  0.0f, -1.0f,  0.0f } },
+    { {  0.5f, -0.5f, -0.5f }, {  0.0f, -1.0f,  0.0f } },
+    { {  0.5f, -0.5f,  0.5f }, {  0.0f, -1.0f,  0.0f } },
+    { {  0.5f, -0.5f,  0.5f }, {  0.0f, -1.0f,  0.0f } },
+    { { -0.5f, -0.5f,  0.5f }, {  0.0f, -1.0f,  0.0f } },
+    { { -0.5f, -0.5f, -0.5f }, {  0.0f, -1.0f,  0.0f } },
 
-    { { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f} },
-    { {  0.5f,  0.5f, -0.5f }, { 1.0f, 1.0f} },
-    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f} },
-    { {  0.5f,  0.5f,  0.5f }, { 1.0f, 0.0f} },
-    { { -0.5f,  0.5f,  0.5f }, { 0.0f, 0.0f} },
-    { { -0.5f,  0.5f, -0.5f }, { 0.0f, 1.0f} },
+    { { -0.5f,  0.5f, -0.5f }, {  0.0f,  1.0f,  0.0f } },
+    { {  0.5f,  0.5f, -0.5f }, {  0.0f,  1.0f,  0.0f } },
+    { {  0.5f,  0.5f,  0.5f }, {  0.0f,  1.0f,  0.0f } },
+    { {  0.5f,  0.5f,  0.5f }, {  0.0f,  1.0f,  0.0f } },
+    { { -0.5f,  0.5f,  0.5f }, {  0.0f,  1.0f,  0.0f } },
+    { { -0.5f,  0.5f, -0.5f }, {  0.0f,  1.0f,  0.0f } },
   }, {
-    { cubeTextureID, "texture0" }
+    { cubemapTextureID, "skybox" }
   });
 
   while (!glfwWindowShouldClose(window)) {
@@ -316,6 +310,7 @@ int main(void) {
     glm::mat4 viewMatrix = camera.getViewMatrix();
 
     shaderProgram->use();
+    shaderProgram->uniform("cameraPos", camera.getPosition());
     shaderProgram->uniform("projectionMatrix", projectionMatrix);
     shaderProgram->uniform("viewMatrix", viewMatrix);
     shaderProgram->uniform("modelMatrix", glm::mat4(1.0f));
