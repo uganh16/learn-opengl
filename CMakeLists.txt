@@ -49,7 +49,15 @@ target_link_libraries(framework
     glfw
     OpenGL::GL)
 
-add_executable(cubemap-skybox
-  apps/cubemap-skybox/App.cc
-)
-target_link_libraries(cubemap-skybox PRIVATE framework)
+file(GLOB APP_DIRS LIST_DIRECTORIES TRUE "apps/*")
+foreach(APP_DIR ${APP_DIRS})
+  if(IS_DIRECTORY ${APP_DIR})
+    get_filename_component(APP_NAME ${APP_DIR} NAME)
+    file(GLOB APP_SOURCES "${APP_DIR}/*.cc" "${APP_DIR}/*.h")
+    if(APP_SOURCES)
+      message(STATUS "Adding app: ${APP_NAME}")
+      add_executable(${APP_NAME} ${APP_SOURCES})
+      target_link_libraries(${APP_NAME} PRIVATE framework)
+    endif()
+  endif()
+endforeach()
