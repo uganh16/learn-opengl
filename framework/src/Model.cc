@@ -109,7 +109,7 @@ void Model::processMesh(const aiMesh* mesh, const aiScene* scene) {
       if (textureID != 0) {
         /* Retrieve texture number. */
         int number = textureNrs[pair.second]++;
-        textures.push_back({ textureID, "material." + pair.second + std::to_string(number), path });
+        textures.push_back({ textureID, false, "material." + pair.second + std::to_string(number), path });
       }
     }
   }

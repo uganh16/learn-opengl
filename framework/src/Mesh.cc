@@ -23,7 +23,11 @@ void Mesh::draw(const ShaderProgram& shaderProgram) const {
     /* Then, set the sampler to the correct texture unit. */
     shaderProgram.uniform(texture.name, static_cast<GLint>(i));
     /* Finally, bind the texture. */
-    glBindTexture(GL_TEXTURE_2D, texture.id);
+    if (texture.isCubemap) {
+      glBindTexture(GL_TEXTURE_CUBE_MAP, texture.id);
+    } else {
+      glBindTexture(GL_TEXTURE_2D, texture.id);
+    }
   }
 
   /* Draw mesh. */

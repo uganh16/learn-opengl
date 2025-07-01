@@ -70,3 +70,46 @@ GLuint TextureLoader::loadTexture(const std::string& path) {
 
   return textureID;
 }
+
+GLuint TextureLoader::loadCubemapTexture(const std::string& directory) {
+  const static std::vector<std::pair<GLenum, std::string>> faces = {
+    { GL_TEXTURE_CUBE_MAP_POSITIVE_X,  "right.jpg" },
+    { GL_TEXTURE_CUBE_MAP_NEGATIVE_X,   "left.jpg" },
+    { GL_TEXTURE_CUBE_MAP_POSITIVE_Y,    "top.jpg" },
+    { GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, "bottom.jpg" },
+    { GL_TEXTURE_CUBE_MAP_POSITIVE_Z,  "front.jpg" },
+    { GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,   "back.jpg" },
+  };
+
+  GLuint textureID;
+  glGenTextures(1, &textureID);
+
+  glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+  stbi_set_flip_vertically_on_load(false);
+
+  int width, height, nrChannels;
+  stbi_uc* image;
+  for (const auto& pair : faces) {
+    std::string path = directory + "/" + pair.second;
+    image = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
+    if (image != NULL) {
+      glTexImage2D(pair.first, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+      stbi_image_free(image);
+    } else {
+      std::cerr << "Cubemap texture failed to load at path: " << path << std::endl;
+    }
+  }
+
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+  glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+  cache[directory] = textureID;
+
+  return textureID;
+}

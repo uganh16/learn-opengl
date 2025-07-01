@@ -11,6 +11,7 @@ class ShaderProgram;
 
 struct Texture {
   GLuint id;
+  bool isCubemap;
   std::string name;
   std::string path;
 };

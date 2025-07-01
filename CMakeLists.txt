@@ -25,21 +25,31 @@ find_package(OpenGL REQUIRED)
 
 add_subdirectory(third_party/glad)
 
-add_executable(opengl_app
-  ${PROJECT_SOURCE_DIR}/src/Camera.cc
-  ${PROJECT_SOURCE_DIR}/src/Camera.h
-  ${PROJECT_SOURCE_DIR}/src/main.cc
-  ${PROJECT_SOURCE_DIR}/src/Mesh.cc
-  ${PROJECT_SOURCE_DIR}/src/Mesh.h
-  ${PROJECT_SOURCE_DIR}/src/Model.cc
-  ${PROJECT_SOURCE_DIR}/src/Model.h
-  ${PROJECT_SOURCE_DIR}/src/ShaderProgram.cc
-  ${PROJECT_SOURCE_DIR}/src/ShaderProgram.h
-  ${PROJECT_SOURCE_DIR}/src/TextureLoader.cc
-  ${PROJECT_SOURCE_DIR}/src/TextureLoader.h
+add_library(framework STATIC
+  framework/src/Camera.cc
+  framework/src/Framework.cc
+  framework/src/Mesh.cc
+  framework/src/Model.cc
+  framework/src/ShaderProgram.cc
+  framework/src/TextureLoader.cc
 )
-target_include_directories(opengl_app PRIVATE
-  ${boost_pfr_SOURCE_DIR}/include
-  ${PROJECT_SOURCE_DIR}/third_party/stb
+target_include_directories(framework
+  PUBLIC
+    ${boost_pfr_SOURCE_DIR}/include
+    framework/include
+  PRIVATE
+    third_party/stb
 )
-target_link_libraries(opengl_app PRIVATE assimp::assimp glad glfw glm::glm OpenGL::GL)
+target_link_libraries(framework
+  PUBLIC
+    glad
+    glm::glm
+  PRIVATE
+    assimp::assimp
+    glfw
+    OpenGL::GL)
+
+add_executable(cubemap-skybox
+  apps/cubemap-skybox/App.cc
+)
+target_link_libraries(cubemap-skybox PRIVATE framework)
